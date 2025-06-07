@@ -12,13 +12,16 @@ import { AddSubOptionModal } from '@/components/AddSubOptionModal';
 import { AIPromptArea } from '@/components/AIPromptArea';
 // Util & Hook Imports
 import { useToolsStore } from '@/stores/useToolsStore';
-import { useHasMounted } from '@/hooks/useHasMounted'; // Corrected import path if hooks is top-level in src
 import type { ToolCategory, Tool } from '@/lib/types';
 import { Zap, Target, ShieldCheck } from "lucide-react";
 
 export default function Home() {
-  const hasMounted = useHasMounted();
-  const { triggers, actions, constraints, addTool, removeTool, updateTool } = useToolsStore();
+  const { triggers, actions, constraints, addTool, removeTool, updateTool, hydrate } = useToolsStore();
+
+  // On initial mount, call hydrate() to load data from localStorage.
+  useEffect(() => {
+    hydrate();
+  }, [hydrate]);
 
   // State for Modals
   const [addToolModalOpen, setAddToolModalOpen] = useState(false);
@@ -65,25 +68,26 @@ export default function Home() {
   const handleAddSubOptionSubmit = (newSubOption: string) => {
     if (addSubOptionModal.tool && addSubOptionModal.category) {
       const { id, subOptions } = addSubOptionModal.tool;
-      const category = addSubOptionModal.category; // Ensure category is not null
+      const category = addSubOptionModal.category;
       updateTool(category, id, { subOptions: [...subOptions, newSubOption] });
     }
     setAddSubOptionModal({ isOpen: false, tool: null, category: null });
   };
   
-  // Effect for hydrating Zustand store correctly
+  // Initial check for hydration
+  const [isHydrated, setIsHydrated] = useState(useToolsStore.getState().triggers.length > 0 || useToolsStore.getState().actions.length > 0 || useToolsStore.getState().constraints.length > 0);
+
   useEffect(() => {
-    useToolsStore.persist.rehydrate();
+    const unsubscribe = useToolsStore.subscribe(
+      (state) => setIsHydrated(state.triggers.length > 0 || state.actions.length > 0 || state.constraints.length > 0 || !!Object.keys(state).find(key => (state[key as keyof typeof state] as any[]).length > 0)) // a bit more robust check
+    );
+    // If initial load from localStorage populated the store, reflect that
+    if (useToolsStore.getState().triggers.length > 0 || useToolsStore.getState().actions.length > 0 || useToolsStore.getState().constraints.length > 0) {
+        setIsHydrated(true);
+    }
+    return unsubscribe;
   }, []);
 
-
-  if (!hasMounted) {
-    return (
-      <div className="flex flex-col h-screen bg-background p-4 lg:p-6 items-center justify-center">
-        <p className="text-muted-foreground animate-pulse">Carregando NexusFlow...</p>
-      </div>
-    );
-  }
 
   const allColumns = [
     { title: "Gatilhos", icon: Zap, category: "triggers" as ToolCategory, data: triggers },
@@ -109,6 +113,14 @@ export default function Home() {
           {allColumns.map(({ title, icon, category, data }) => (
             <ToolColumn key={category} title={title} icon={icon} onAdd={() => handleOpenAddToolModal(category)}>
               <AnimatePresence>
+                {data.length === 0 && (
+                  <motion.p 
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                    className="text-sm text-muted-foreground text-center py-4"
+                  >
+                    Sem {title.toLowerCase()} definidos.
+                  </motion.p>
+                )}
                 {data.map(tool => (
                   <motion.div 
                     key={tool.id} 
@@ -126,14 +138,6 @@ export default function Home() {
                     />
                   </motion.div>
                 ))}
-                 {data.length === 0 && (
-                  <motion.p 
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                    className="text-sm text-muted-foreground text-center py-4"
-                  >
-                    Nenhum {title.toLowerCase()} adicionado.
-                  </motion.p>
-                )}
               </AnimatePresence>
             </ToolColumn>
           ))}
