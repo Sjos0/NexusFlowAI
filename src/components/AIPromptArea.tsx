@@ -35,15 +35,24 @@ export function AIPromptArea() {
       });
 
       if (!apiResponse.ok) {
-        const errorData = await apiResponse.json().catch(() => ({ message: 'Falha ao gerar o plano. Resposta não JSON.' }));
-        throw new Error(errorData.message || 'Falha ao gerar o plano.');
+        let finalErrorMessage;
+        try {
+          // Tenta parsear o corpo do erro como JSON, pois a API pode retornar erros estruturados
+          const errorBody = await apiResponse.json();
+          finalErrorMessage = errorBody.message || errorBody.error || `Erro ${apiResponse.status}: ${apiResponse.statusText}.`;
+        } catch (e) {
+          // Falha ao parsear JSON, então o corpo do erro não era JSON (ex: página HTML de erro 404)
+          finalErrorMessage = `Erro ${apiResponse.status}: ${apiResponse.statusText}. A resposta do servidor não era JSON.`;
+        }
+        throw new Error(finalErrorMessage);
       }
 
       const data = await apiResponse.json();
-      setResponse(data.plan);
+      // Supondo que a resposta de sucesso tenha uma chave 'plan'
+      setResponse(data.plan || 'Resposta da IA recebida, mas sem plano especificado.');
     } catch (error) {
-      console.error(error);
-      setResponse(error instanceof Error ? error.message : 'Ocorreu um erro desconhecido.');
+      console.error(error); // Esta linha causa o erro no console que você viu
+      setResponse(error instanceof Error ? error.message : 'Ocorreu um erro desconhecido ao tentar gerar o plano.');
     } finally {
       setIsLoading(false);
     }
@@ -58,7 +67,7 @@ export function AIPromptArea() {
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             placeholder="Descreva a automação que você deseja criar..."
-            className="flex-grow pr-28" // Adjusted paddingRight to make space for the button
+            className="flex-grow pr-28" // Espaço para o botão
             disabled={isLoading}
             aria-label="Prompt de Automação"
           />
