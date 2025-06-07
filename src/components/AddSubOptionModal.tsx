@@ -2,21 +2,21 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 
 interface AddSubOptionModalProps {
   onClose: () => void;
-  onAdd: (subOption: string) => void;
+  onAdd: (subOptions: string[]) => void;
   toolName: string;
 }
 
 export function AddSubOptionModal({ onClose, onAdd, toolName }: AddSubOptionModalProps) {
-  const [subOption, setSubOption] = useState('');
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [textValue, setTextValue] = useState('');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    inputRef.current?.focus();
+    textareaRef.current?.focus();
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         onClose();
@@ -30,10 +30,17 @@ export function AddSubOptionModal({ onClose, onAdd, toolName }: AddSubOptionModa
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (subOption.trim()) {
-      onAdd(subOption.trim());
-      onClose();
+    if (textValue.trim()) {
+      const parsedOptions = textValue
+        .split(',')
+        .map(option => option.trim())
+        .filter(option => option.length > 0);
+
+      if (parsedOptions.length > 0) {
+        onAdd(parsedOptions);
+      }
     }
+    onClose(); 
   };
 
   return (
@@ -53,28 +60,28 @@ export function AddSubOptionModal({ onClose, onAdd, toolName }: AddSubOptionModa
         className="bg-card p-6 rounded-lg shadow-xl w-full max-w-md"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="font-headline text-xl mb-1 text-foreground">Adicionar Sub-Opção</h2>
+        <h2 className="font-headline text-xl mb-1 text-foreground">Adicionar Sub-Opções em Lote</h2>
         <p className="text-muted-foreground mb-4 text-sm">para "{toolName}"</p>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label htmlFor="subOptionName" className="text-muted-foreground sr-only">Nome da Sub-Opção</Label>
-            <Input
-              id="subOptionName"
-              type="text"
-              value={subOption}
-              onChange={(e) => setSubOption(e.target.value)}
-              placeholder="Ex: Conectado a SSID Específico"
-              className="w-full"
+            <Label htmlFor="subOptionText" className="text-muted-foreground sr-only">Sub-Opções</Label>
+            <Textarea
+              id="subOptionText"
+              value={textValue}
+              onChange={(e) => setTextValue(e.target.value)}
+              placeholder="Ex: Opção A, Opção B, Opção C"
+              className="w-full h-32"
               required
-              ref={inputRef}
+              ref={textareaRef}
             />
+            <p className="text-xs text-muted-foreground mt-1">Separe múltiplas opções com uma vírgula.</p>
           </div>
           <div className="flex justify-end space-x-3 pt-2">
             <Button type="button" variant="outline" onClick={onClose}>
               Cancelar
             </Button>
             <Button type="submit">
-              Adicionar Sub-Opção
+              Adicionar Opções
             </Button>
           </div>
         </form>

@@ -65,11 +65,20 @@ export default function Home() {
     setAddSubOptionModal({ isOpen: true, tool, category });
   };
 
-  const handleAddSubOptionSubmit = (newSubOption: string) => {
+  const handleAddSubOptionSubmit = (newSubOptions: string[]) => {
     if (addSubOptionModal.tool && addSubOptionModal.category) {
-      const { id, subOptions } = addSubOptionModal.tool;
+      const { id, subOptions: existingSubOptions } = addSubOptionModal.tool;
       const category = addSubOptionModal.category;
-      updateTool(category, id, { subOptions: [...subOptions, newSubOption] });
+      
+      // Combine existing options with new ones, preventing duplicates
+      const combinedOptions = [...existingSubOptions];
+      newSubOptions.forEach(newOpt => {
+        if (!combinedOptions.includes(newOpt)) {
+          combinedOptions.push(newOpt);
+        }
+      });
+      
+      updateTool(category, id, { subOptions: combinedOptions });
     }
     setAddSubOptionModal({ isOpen: false, tool: null, category: null });
   };
