@@ -49,13 +49,15 @@ const config: Config = {
         body: ['Inter', 'sans-serif'],
         headline: ['Poppins', 'sans-serif'],
       },
-      borderRadius: { // Standard ShadCN border radius setup
+      borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
     },
   },
-  plugins: [], // Preserving user's empty plugins array
+  plugins: [
+    require('@tailwindcss/typography'),
+  ],
 };
 export default config;

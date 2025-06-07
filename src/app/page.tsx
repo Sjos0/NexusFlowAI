@@ -5,18 +5,17 @@ import { useState, useEffect } from 'react';
 import { ToolColumn } from "@/components/ToolColumn";
 import { ToolCard } from "@/components/ToolCard";
 import { AddToolModal } from '@/components/AddToolModal';
+import { AIPromptArea } from '@/components/AIPromptArea';
 import { Zap, Target, ShieldCheck } from "lucide-react";
 import { useToolsStore } from '@/stores/useToolsStore';
 import type { ToolCategory } from '@/lib/types';
 
 export default function Home() {
-  // Estado para garantir que o store foi hidratado antes de renderizar
   const [hydrated, setHydrated] = useState(false);
   const { triggers, actions, constraints, addTool } = useToolsStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalCategory, setModalCategory] = useState<ToolCategory | null>(null);
 
-  // Efeito para marcar como hidratado após a montagem no cliente
   useEffect(() => {
     setHydrated(true);
   }, []);
@@ -44,7 +43,6 @@ export default function Home() {
     constraints: 'Restrições'
   };
   
-  // Não renderizar nada até que o store esteja hidratado para evitar mismatch
   if (!hydrated) {
     return (
       <div className="flex flex-col h-screen bg-background p-4 lg:p-6 items-center justify-center">
@@ -85,9 +83,7 @@ export default function Home() {
         </div>
 
         <footer className="mt-6">
-          <div className="bg-card rounded-lg p-4">
-            <p className="text-center text-muted-foreground">A área de interação com a IA virá aqui.</p>
-          </div>
+          <AIPromptArea />
         </footer>
       </main>
 
