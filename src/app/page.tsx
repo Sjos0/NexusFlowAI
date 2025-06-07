@@ -1,56 +1,95 @@
 // src/app/page.tsx
-'use client'; 
+'use client';
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+// Component Imports
 import { ToolColumn } from "@/components/ToolColumn";
 import { ToolCard } from "@/components/ToolCard";
 import { AddToolModal } from '@/components/AddToolModal';
+import { ConfirmationModal } from '@/components/ConfirmationModal';
+import { AddSubOptionModal } from '@/components/AddSubOptionModal';
 import { AIPromptArea } from '@/components/AIPromptArea';
-import { Zap, Target, ShieldCheck } from "lucide-react";
+// Util & Hook Imports
 import { useToolsStore } from '@/stores/useToolsStore';
-import type { ToolCategory } from '@/lib/types';
+import { useHasMounted } from '@/hooks/useHasMounted'; // Corrected import path if hooks is top-level in src
+import type { ToolCategory, Tool } from '@/lib/types';
+import { Zap, Target, ShieldCheck } from "lucide-react";
 
 export default function Home() {
-  const [hydrated, setHydrated] = useState(false);
-  const { triggers, actions, constraints, addTool, removeTool } = useToolsStore();
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalCategory, setModalCategory] = useState<ToolCategory | null>(null);
+  const hasMounted = useHasMounted();
+  const { triggers, actions, constraints, addTool, removeTool, updateTool } = useToolsStore();
 
-  useEffect(() => {
-    setHydrated(true);
-  }, []);
+  // State for Modals
+  const [addToolModalOpen, setAddToolModalOpen] = useState(false);
+  const [currentCategoryForAdd, setCurrentCategoryForAdd] = useState<ToolCategory | null>(null);
 
-  const handleOpenModal = (category: ToolCategory) => {
-    setModalCategory(category);
-    setIsModalOpen(true);
-  };
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setModalCategory(null);
-  };
-
-  const handleAddTool = (name: string, subOptions: string[]) => {
-    if (modalCategory) {
-      const newTool = { id: crypto.randomUUID(), name, subOptions };
-      addTool(modalCategory, newTool);
-    }
-  };
-
+  const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; toolId: string | null; category: ToolCategory | null; toolName: string | null }>({ isOpen: false, toolId: null, category: null, toolName: null });
+  const [addSubOptionModal, setAddSubOptionModal] = useState<{ isOpen: boolean; tool: Tool | null; category: ToolCategory | null }>({ isOpen: false, tool: null, category: null });
+  
   const categoryTitles: Record<ToolCategory, string> = {
     triggers: 'Gatilhos',
     actions: 'Ações',
     constraints: 'Restrições'
   };
+
+  // === Handlers for Modals ===
+  const handleOpenAddToolModal = (category: ToolCategory) => {
+    setCurrentCategoryForAdd(category);
+    setAddToolModalOpen(true);
+  };
+
+  const handleAddToolSubmit = (name: string, subOptions: string[]) => {
+    if (currentCategoryForAdd) {
+      addTool(currentCategoryForAdd, { id: crypto.randomUUID(), name, subOptions });
+    }
+    setAddToolModalOpen(false);
+    setCurrentCategoryForAdd(null);
+  };
   
-  if (!hydrated) {
+  const handleOpenConfirmDelete = (category: ToolCategory, tool: Tool) => {
+    setConfirmModal({ isOpen: true, toolId: tool.id, category, toolName: tool.name });
+  };
+
+  const handleConfirmDelete = () => {
+    if (confirmModal.toolId && confirmModal.category) {
+      removeTool(confirmModal.category, confirmModal.toolId);
+    }
+    setConfirmModal({ isOpen: false, toolId: null, category: null, toolName: null });
+  };
+
+  const handleOpenAddSubOption = (category: ToolCategory, tool: Tool) => {
+    setAddSubOptionModal({ isOpen: true, tool, category });
+  };
+
+  const handleAddSubOptionSubmit = (newSubOption: string) => {
+    if (addSubOptionModal.tool && addSubOptionModal.category) {
+      const { id, subOptions } = addSubOptionModal.tool;
+      const category = addSubOptionModal.category; // Ensure category is not null
+      updateTool(category, id, { subOptions: [...subOptions, newSubOption] });
+    }
+    setAddSubOptionModal({ isOpen: false, tool: null, category: null });
+  };
+  
+  // Effect for hydrating Zustand store correctly
+  useEffect(() => {
+    useToolsStore.persist.rehydrate();
+  }, []);
+
+
+  if (!hasMounted) {
     return (
       <div className="flex flex-col h-screen bg-background p-4 lg:p-6 items-center justify-center">
-        <p className="text-muted-foreground">Carregando NexusFlow...</p>
+        <p className="text-muted-foreground animate-pulse">Carregando NexusFlow...</p>
       </div>
     );
   }
+
+  const allColumns = [
+    { title: "Gatilhos", icon: Zap, category: "triggers" as ToolCategory, data: triggers },
+    { title: "Ações", icon: Target, category: "actions" as ToolCategory, data: actions },
+    { title: "Restrições", icon: ShieldCheck, category: "constraints" as ToolCategory, data: constraints },
+  ];
 
   return (
     <>
@@ -67,73 +106,62 @@ export default function Home() {
         </header>
         
         <div className="flex-grow grid grid-cols-1 md:grid-cols-3 gap-6">
-          <ToolColumn title="Gatilhos" icon={Zap} onAdd={() => handleOpenModal('triggers')}>
-            <AnimatePresence>
-              {triggers.map(tool => 
-                <motion.div
-                  key={tool.id}
-                  layout
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <ToolCard name={tool.name} subOptions={tool.subOptions} onDelete={() => removeTool('triggers', tool.id)} />
-                </motion.div>
-              )}
-              {triggers.length === 0 && !isModalOpen && ( // Conditionally render placeholder
-                 <motion.p 
+          {allColumns.map(({ title, icon, category, data }) => (
+            <ToolColumn key={category} title={title} icon={icon} onAdd={() => handleOpenAddToolModal(category)}>
+              <AnimatePresence>
+                {data.map(tool => (
+                  <motion.div 
+                    key={tool.id} 
+                    layout 
+                    initial={{ opacity: 0, y: 20 }} 
+                    animate={{ opacity: 1, y: 0 }} 
+                    exit={{ opacity: 0, x: -20, transition: { duration: 0.2 } }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <ToolCard
+                      name={tool.name}
+                      subOptions={tool.subOptions}
+                      onDelete={() => handleOpenConfirmDelete(category, tool)}
+                      onAddSubOption={() => handleOpenAddSubOption(category, tool)}
+                    />
+                  </motion.div>
+                ))}
+                 {data.length === 0 && (
+                  <motion.p 
                     initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                    className="text-sm text-muted-foreground text-center py-4">Nenhum gatilho adicionado.
-                 </motion.p>
-              )}
-            </AnimatePresence>
-          </ToolColumn>
-
-          <ToolColumn title="Ações" icon={Target} onAdd={() => handleOpenModal('actions')}>
-            <AnimatePresence>
-              {actions.map(tool => 
-                 <motion.div key={tool.id} layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3 }}>
-                  <ToolCard name={tool.name} subOptions={tool.subOptions} onDelete={() => removeTool('actions', tool.id)} />
-                </motion.div>
-              )}
-              {actions.length === 0 && !isModalOpen && (
-                 <motion.p 
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                    className="text-sm text-muted-foreground text-center py-4">Nenhuma ação adicionada.
-                 </motion.p>
-              )}
-            </AnimatePresence>
-          </ToolColumn>
-
-          <ToolColumn title="Restrições" icon={ShieldCheck} onAdd={() => handleOpenModal('constraints')}>
-            <AnimatePresence>
-              {constraints.map(tool => 
-                <motion.div key={tool.id} layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3 }}>
-                  <ToolCard name={tool.name} subOptions={tool.subOptions} onDelete={() => removeTool('constraints', tool.id)} />
-                </motion.div>
-              )}
-              {constraints.length === 0 && !isModalOpen && (
-                 <motion.p 
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                    className="text-sm text-muted-foreground text-center py-4">Nenhuma restrição adicionada.
-                 </motion.p>
-              )}
-            </AnimatePresence>
-          </ToolColumn>
+                    className="text-sm text-muted-foreground text-center py-4"
+                  >
+                    Nenhum {title.toLowerCase()} adicionado.
+                  </motion.p>
+                )}
+              </AnimatePresence>
+            </ToolColumn>
+          ))}
         </div>
-
-        <footer className="mt-6">
-          <AIPromptArea />
-        </footer>
+        <footer className="mt-6"><AIPromptArea /></footer>
       </main>
 
       <AnimatePresence>
-        {isModalOpen && modalCategory && (
+        {addToolModalOpen && currentCategoryForAdd && (
           <AddToolModal
-            onClose={handleCloseModal}
-            onAdd={handleAddTool}
-            categoryTitle={categoryTitles[modalCategory]}
+            onClose={() => { setAddToolModalOpen(false); setCurrentCategoryForAdd(null);}}
+            onAdd={handleAddToolSubmit}
+            categoryTitle={categoryTitles[currentCategoryForAdd]}
+          />
+        )}
+        {confirmModal.isOpen && (
+          <ConfirmationModal
+            onCancel={() => setConfirmModal({ isOpen: false, toolId: null, category: null, toolName: null })}
+            onConfirm={handleConfirmDelete}
+            message={`Tem certeza que deseja deletar a ferramenta "${confirmModal.toolName || 'esta ferramenta'}"? Esta ação não pode ser desfeita.`}
+            title="Confirmar Exclusão"
+          />
+        )}
+        {addSubOptionModal.isOpen && addSubOptionModal.tool && addSubOptionModal.category && (
+          <AddSubOptionModal
+            onClose={() => setAddSubOptionModal({ isOpen: false, tool: null, category: null })}
+            onAdd={handleAddSubOptionSubmit}
+            toolName={addSubOptionModal.tool.name}
           />
         )}
       </AnimatePresence>

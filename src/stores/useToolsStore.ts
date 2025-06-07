@@ -1,10 +1,19 @@
 // src/stores/useToolsStore.ts
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Tool, ToolCategory, ToolsState } from '@/lib/types';
+import type { Tool, ToolCategory } from '@/lib/types';
 
 // Helper para garantir que o localStorage só seja acessado no cliente
 const isClient = typeof window !== 'undefined';
+
+export interface ToolsState {
+  triggers: Tool[];
+  actions: Tool[];
+  constraints: Tool[];
+  addTool: (category: ToolCategory, tool: Tool) => void;
+  removeTool: (category: ToolCategory, toolId: string) => void;
+  updateTool: (category: ToolCategory, toolId: string, updatedTool: Partial<Tool>) => void;
+}
 
 export const useToolsStore = create<ToolsState>()(
   persist(
@@ -34,22 +43,27 @@ export const useToolsStore = create<ToolsState>()(
           [category]: state[category].filter((tool) => tool.id !== toolId),
         }));
       },
+      
+      updateTool: (category, toolId, updatedData) => {
+        set((state) => ({
+          [category]: state[category].map((tool) =>
+            tool.id === toolId ? { ...tool, ...updatedData } : tool
+          ),
+        }));
+      },
     }),
     {
-      name: 'nexusflow-tools-storage', // Nome da chave no localStorage
-      // Fornecer um storage dummy no servidor para evitar erros durante SSR/SSG
+      name: 'nexusflow-tools-storage',
       storage: isClient ? localStorage : {
         getItem: () => null,
         setItem: () => {},
         removeItem: () => {},
       },
-      // Atrasar a hidratação até que o cliente esteja pronto
       skipHydration: !isClient,
     }
   )
 );
 
-// Disparar a hidratação no cliente após a montagem inicial
 if (isClient) {
   useToolsStore.persist.rehydrate();
 }
