@@ -9,15 +9,27 @@ const loadState = (): Pick<ToolsState, 'triggers' | 'actions' | 'constraints'> =
   if (typeof window === 'undefined') {
     return { triggers: [], actions: [], constraints: [] };
   }
-  try {
-    const item = window.localStorage.getItem(STORAGE_KEY);
-    if (item) {
+  
+  const item = window.localStorage.getItem(STORAGE_KEY);
+
+  if (item) {
+    try {
+      // Attempt to parse the item
       return JSON.parse(item);
+    } catch (error) {
+      // If parsing fails, log a warning and try to remove the corrupted item
+      console.warn(
+        `Failed to parse localStorage item for key '${STORAGE_KEY}'. Item was: "${item}". Error: ${error}. Resetting to default state and attempting to remove the corrupted item.`
+      );
+      try {
+        window.localStorage.removeItem(STORAGE_KEY);
+      } catch (removeError) {
+        // Log an error if removal also fails, though this is less critical
+        console.error(`Failed to remove corrupted localStorage item '${STORAGE_KEY}':`, removeError);
+      }
     }
-  } catch (error) {
-    console.error("Failed to load state from localStorage", error);
   }
-  // If nothing is in storage, or an error occurs, return a clean empty state.
+  // If no item was found, or if parsing failed and item was removed (or removal failed), return default state
   return {
     triggers: [],
     actions: [],
@@ -78,7 +90,7 @@ export const useToolsStore = create<ToolsState>((set) => ({
       const newState = {
         ...state,
         [category]: state[category].map((t) =>
-          t.id === toolId ? { ...tool, ...updatedData } : t
+          t.id === toolId ? { ...t, ...updatedData } : t
         ),
       };
       saveState({ triggers: newState.triggers, actions: newState.actions, constraints: newState.constraints });
