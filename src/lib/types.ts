@@ -14,3 +14,11 @@ export interface ToolsState {
   addTool: (category: ToolCategory, tool: Tool) => void;
   removeTool: (category: ToolCategory, toolId: string) => void;
 }
+
+export interface GeneratedPlan {
+  macroName: string;
+  explanation: string;
+  triggers: string[];
+  actions: string[];
+  constraints: string[];
+}

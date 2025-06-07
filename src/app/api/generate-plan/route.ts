@@ -1,12 +1,11 @@
 // src/app/api/generate-plan/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { ai } from '@/ai/genkit'; // Using the pre-configured ai object from Genkit 1.x setup
+import { ai } from '@/ai/genkit'; // Using the pre-configured ai object
 
 export async function POST(req: NextRequest) {
   try {
     const { prompt, tools } = await req.json();
 
-    // Constrói o contexto para a IA
     const availableTools = `
       Gatilhos Disponíveis: ${tools.triggers.map((t: { name: string }) => t.name).join(', ') || 'Nenhum'}.
       Ações Disponíveis: ${tools.actions.map((a: { name: string }) => a.name).join(', ') || 'Nenhuma'}.
@@ -14,41 +13,58 @@ export async function POST(req: NextRequest) {
     `;
 
     const masterPrompt = `
-      Você é um especialista em MacroDroid e um planejador de automações. Seu objetivo é criar um plano de automação detalhado e didático para um usuário com base no objetivo dele e nas ferramentas que ele forneceu.
+      Você é um especialista em MacroDroid. Seu objetivo é analisar o pedido de um usuário e as ferramentas que ele tem e criar um plano de automação.
 
-      **Instruções Cruciais:**
-      1. Use APENAS as ferramentas listadas em "Ferramentas Disponíveis". Não invente gatilhos, ações ou restrições que não estão na lista.
-      2. Se o pedido do usuário não puder ser atendido com as ferramentas disponíveis, explique por que e sugira quais tipos de ferramentas ele precisaria adicionar.
-      3. Seja claro, direto e organize a resposta em um passo a passo lógico.
-      4. Responda em HTML formatado. Use tags como <h2> para o título, <h3> para seções (Gatilho, Ações, Restrições), <ul> e <li> para listas e <strong> para destacar os nomes das ferramentas.
+      **Sua resposta DEVE ser um objeto JSON VÁLIDO e NADA MAIS.**
+      O JSON deve ter a seguinte estrutura:
+      {
+        "macroName": "Um nome curto e descritivo para a macro",
+        "explanation": "Uma explicação em texto simples e didático de como a automação funciona.",
+        "triggers": ["Nome exato do gatilho da lista de disponíveis"],
+        "actions": ["Nome exato da ação 1", "Nome exato da ação 2"],
+        "constraints": ["Nome exato da restrição, se aplicável"]
+      }
+
+      **REGRAS IMPORTANTES:**
+      1. Use APENAS os nomes das ferramentas EXATAMENTE como aparecem nas listas de disponíveis.
+      2. Se o pedido for impossível de fazer com as ferramentas atuais, os arrays devem vir vazios e a "explanation" deve dizer por que não é possível e o que o usuário precisa adicionar.
+      3. Seja conciso.
 
       ---
       Ferramentas Disponíveis:
       ${availableTools}
       ---
-      O objetivo do usuário é: "${prompt}"
+      Pedido do usuário: "${prompt}"
       ---
-
-      Agora, gere o plano de automação:
+      
+      Gere o objeto JSON agora.
     `;
 
-    // Chama o modelo Gemini com o prompt construído usando Genkit 1.x syntax
     const llmResponse = await ai.generate({
-      model: 'googleai/gemini-1.5-flash-latest', // Using a standard recent model, user can change if needed. User's choice was 'gemini-2.5-flash-preview-05-20' which can be used as 'googleai/gemini-2.5-flash-preview-05-20'
+      model: 'googleai/gemini-1.5-flash-latest', // Using a reliable model, can be changed to 'googleai/gemini-2.5-flash-preview-05-20' if preferred and available
       prompt: masterPrompt,
-      config: {
-        temperature: 0.4, // Um valor que favorece a precisão sobre a criatividade
-      },
+      config: { temperature: 0.2 },
     });
 
-    // Retorna a resposta da IA em formato de texto (que será nosso HTML) - Genkit 1.x syntax
-    return NextResponse.json({ plan: llmResponse.text });
+    // Extrair o JSON da resposta da IA
+    // Remove markdown backticks if present
+    const responseText = (llmResponse.text || '').replace(/```json/g, '').replace(/```/g, '').trim();
+    let plan;
+
+    try {
+      plan = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error("Erro ao parsear JSON da IA:", parseError, "Texto recebido:", responseText);
+      throw new Error('A IA retornou uma resposta em formato JSON inválido.');
+    }
+
+    return NextResponse.json(plan);
 
   } catch (error) {
     console.error("Erro na API /api/generate-plan:", error);
-    let errorMessage = 'Ocorreu um erro ao se comunicar com a IA.';
+    let errorMessage = 'Ocorreu um erro ao gerar o plano JSON.';
     if (error instanceof Error) {
-      errorMessage = error.message;
+        errorMessage = error.message;
     }
     // Retorna uma resposta de erro clara para o frontend
     return NextResponse.json(
