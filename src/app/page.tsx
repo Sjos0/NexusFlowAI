@@ -12,7 +12,7 @@ import type { ToolCategory } from '@/lib/types';
 
 export default function Home() {
   const [hydrated, setHydrated] = useState(false);
-  const { triggers, actions, constraints, addTool } = useToolsStore();
+  const { triggers, actions, constraints, addTool, removeTool } = useToolsStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalCategory, setModalCategory] = useState<ToolCategory | null>(null);
 
@@ -67,17 +67,23 @@ export default function Home() {
         
         <div className="flex-grow grid grid-cols-1 md:grid-cols-3 gap-6">
           <ToolColumn title="Gatilhos" icon={Zap} onAdd={() => handleOpenModal('triggers')}>
-            {triggers.map(tool => <ToolCard key={tool.id} name={tool.name} />)}
+            {triggers.map(tool => 
+              <ToolCard key={tool.id} name={tool.name} onDelete={() => removeTool('triggers', tool.id)} />
+            )}
             {triggers.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">Nenhum gatilho adicionado.</p>}
           </ToolColumn>
 
           <ToolColumn title="Ações" icon={Target} onAdd={() => handleOpenModal('actions')}>
-            {actions.map(tool => <ToolCard key={tool.id} name={tool.name} />)}
+            {actions.map(tool => 
+              <ToolCard key={tool.id} name={tool.name} onDelete={() => removeTool('actions', tool.id)} />
+            )}
              {actions.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">Nenhuma ação adicionada.</p>}
           </ToolColumn>
 
           <ToolColumn title="Restrições" icon={ShieldCheck} onAdd={() => handleOpenModal('constraints')}>
-            {constraints.map(tool => <ToolCard key={tool.id} name={tool.name} />)}
+            {constraints.map(tool => 
+              <ToolCard key={tool.id} name={tool.name} onDelete={() => removeTool('constraints', tool.id)} />
+            )}
             {constraints.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">Nenhuma restrição adicionada.</p>}
           </ToolColumn>
         </div>

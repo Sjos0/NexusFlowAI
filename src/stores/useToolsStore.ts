@@ -26,6 +26,12 @@ export const useToolsStore = create<ToolsState>()(
           [category]: [...state[category], tool],
         }));
       },
+
+      removeTool: (category: ToolCategory, toolId: string) => {
+        set((state) => ({
+          [category]: state[category].filter((tool) => tool.id !== toolId),
+        }));
+      },
     }),
     {
       name: 'nexusflow-tools-storage', // Nome da chave no localStorage

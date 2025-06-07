@@ -12,4 +12,5 @@ export interface ToolsState {
   actions: Tool[];
   constraints: Tool[];
   addTool: (category: ToolCategory, tool: Tool) => void;
+  removeTool: (category: ToolCategory, toolId: string) => void;
 }
