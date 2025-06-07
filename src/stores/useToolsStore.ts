@@ -10,15 +10,17 @@ export const useToolsStore = create<ToolsState>()(
   persist(
     (set) => ({
       triggers: [
-        { id: '1', name: 'Chamada Recebida' },
-        { id: '2', name: 'Nível da Bateria' },
+        { id: '1', name: 'Chamada Recebida', subOptions: ['De qualquer número', 'De contato salvo', 'De número desconhecido'] },
+        { id: '2', name: 'Nível da Bateria', subOptions: ['Abaixo de 15%', 'Abaixo de 50%', 'Carregando', 'Totalmente Carregada'] },
       ],
       actions: [
-        { id: '3', name: 'Enviar Notificação' },
-        { id: '4', name: 'Abrir Aplicativo' },
+        { id: '3', name: 'Enviar Notificação', subOptions: ['Com som', 'Silenciosa'] },
+        { id: '4', name: 'Abrir Aplicativo', subOptions: [] },
+        { id: '6', name: 'Definir Volume', subOptions: ['Mudo', 'Vibrar', '50%', 'Máximo'] },
       ],
       constraints: [
-        { id: '5', name: 'Dia da Semana' },
+        { id: '5', name: 'Dia da Semana', subOptions: ['Dias úteis', 'Fim de semana', 'Segunda-feira'] },
+        { id: '7', name: 'Horário Específico', subOptions: []},
       ],
 
       addTool: (category: ToolCategory, tool: Tool) => {

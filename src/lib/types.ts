@@ -4,7 +4,7 @@ export type ToolCategory = 'triggers' | 'actions' | 'constraints';
 export interface Tool {
   id: string;
   name: string;
-  // Futuramente, adicionaremos sub-opções aqui
+  subOptions: string[];
 }
 
 export interface ToolsState {
