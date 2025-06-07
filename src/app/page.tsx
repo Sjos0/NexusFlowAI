@@ -1,49 +1,103 @@
 // src/app/page.tsx
+'use client'; 
+
+import { useState, useEffect } from 'react';
 import { ToolColumn } from "@/components/ToolColumn";
 import { ToolCard } from "@/components/ToolCard";
+import { AddToolModal } from '@/components/AddToolModal';
 import { Zap, Target, ShieldCheck } from "lucide-react";
+import { useToolsStore } from '@/stores/useToolsStore';
+import type { ToolCategory } from '@/lib/types';
 
 export default function Home() {
-  return (
-    <main className="flex flex-col h-screen bg-background p-4 lg:p-6">
-      <header className="mb-6 flex justify-between items-center">
-        <div>
-          <h1 className="font-headline text-3xl font-bold">
-            <span className="bg-gradient-to-r from-accent-start to-accent-end bg-clip-text text-transparent">
-              NexusFlow
-            </span>
-          </h1>
-          <p className="text-muted-foreground">Seu planejador de automação para MacroDroid</p>
-        </div>
-      </header>
-      
-      {/* Área de Definição de Ferramentas */}
-      <div className="flex-grow grid grid-cols-1 md:grid-cols-3 gap-6">
-        <ToolColumn title="Gatilhos" icon={Zap}>
-          {/* Exemplos de cards. Serão dinâmicos no futuro. */}
-          <ToolCard name="Chamada Recebida" />
-          <ToolCard name="Nível da Bateria" />
-          <ToolCard name="Conexão Wi-Fi" />
-        </ToolColumn>
+  // Estado para garantir que o store foi hidratado antes de renderizar
+  const [hydrated, setHydrated] = useState(false);
+  const { triggers, actions, constraints, addTool } = useToolsStore();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalCategory, setModalCategory] = useState<ToolCategory | null>(null);
 
-        <ToolColumn title="Ações" icon={Target}>
-          <ToolCard name="Enviar Notificação" />
-          <ToolCard name="Abrir Aplicativo" />
-          <ToolCard name="Definir Volume" />
-        </ToolColumn>
+  // Efeito para marcar como hidratado após a montagem no cliente
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
 
-        <ToolColumn title="Restrições" icon={ShieldCheck}>
-          <ToolCard name="Dia da Semana" />
-          <ToolCard name="Horário do Dia" />
-        </ToolColumn>
+  const handleOpenModal = (category: ToolCategory) => {
+    setModalCategory(category);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setModalCategory(null);
+  };
+
+  const handleAddTool = (name: string) => {
+    if (modalCategory) {
+      const newTool = { id: crypto.randomUUID(), name };
+      addTool(modalCategory, newTool);
+    }
+  };
+
+  const categoryTitles: Record<ToolCategory, string> = {
+    triggers: 'Gatilhos',
+    actions: 'Ações',
+    constraints: 'Restrições'
+  };
+  
+  // Não renderizar nada até que o store esteja hidratado para evitar mismatch
+  if (!hydrated) {
+    return (
+      <div className="flex flex-col h-screen bg-background p-4 lg:p-6 items-center justify-center">
+        <p className="text-muted-foreground">Carregando NexusFlow...</p>
       </div>
+    );
+  }
 
-      {/* Área de IA (placeholder por enquanto) */}
-      <footer className="mt-6">
-        <div className="bg-card rounded-lg p-4">
-          <p className="text-center text-muted-foreground">A área de interação com a IA virá aqui.</p>
+  return (
+    <>
+      <main className="flex flex-col h-screen bg-background p-4 lg:p-6">
+        <header className="mb-6 flex justify-between items-center">
+          <div>
+            <h1 className="font-headline text-3xl font-bold">
+              <span className="bg-gradient-to-r from-accent to-accent-end bg-clip-text text-transparent">
+                NexusFlow
+              </span>
+            </h1>
+            <p className="text-muted-foreground">Seu planejador de automação para MacroDroid</p>
+          </div>
+        </header>
+        
+        <div className="flex-grow grid grid-cols-1 md:grid-cols-3 gap-6">
+          <ToolColumn title="Gatilhos" icon={Zap} onAdd={() => handleOpenModal('triggers')}>
+            {triggers.map(tool => <ToolCard key={tool.id} name={tool.name} />)}
+            {triggers.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">Nenhum gatilho adicionado.</p>}
+          </ToolColumn>
+
+          <ToolColumn title="Ações" icon={Target} onAdd={() => handleOpenModal('actions')}>
+            {actions.map(tool => <ToolCard key={tool.id} name={tool.name} />)}
+             {actions.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">Nenhuma ação adicionada.</p>}
+          </ToolColumn>
+
+          <ToolColumn title="Restrições" icon={ShieldCheck} onAdd={() => handleOpenModal('constraints')}>
+            {constraints.map(tool => <ToolCard key={tool.id} name={tool.name} />)}
+            {constraints.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">Nenhuma restrição adicionada.</p>}
+          </ToolColumn>
         </div>
-      </footer>
-    </main>
+
+        <footer className="mt-6">
+          <div className="bg-card rounded-lg p-4">
+            <p className="text-center text-muted-foreground">A área de interação com a IA virá aqui.</p>
+          </div>
+        </footer>
+      </main>
+
+      {isModalOpen && modalCategory && (
+        <AddToolModal
+          onClose={handleCloseModal}
+          onAdd={handleAddTool}
+          categoryTitle={categoryTitles[modalCategory]}
+        />
+      )}
+    </>
   );
 }
