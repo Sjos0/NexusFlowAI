@@ -24,6 +24,7 @@
 
     --accent: 170 65% 50%; /* #2dd4bf Teal-400 */
     --accent-foreground: 222 47% 11%; /* #0f172a Slate-900 (for text on accent) */
+    --accent-end: 190 95% 43%; /* #06b6d4 Cyan-500 */
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;

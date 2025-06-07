@@ -9,21 +9,53 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: '#0f172a', // Slate-900
-        surface: '#1e293b',    // Slate-800
-        primary: '#e2e8f0',   // Slate-200 (User's primary text color)
-        secondary: '#94a3b8', // Slate-400 (User's secondary text color)
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
+        primary: {
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
+        },
+        secondary: {
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
+        },
+        destructive: {
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))",
+        },
+        muted: {
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))",
+        },
         accent: {
-          start: '#2dd4bf',   // Teal-400
-          end: '#06b6d4',     // Cyan-500
-        }
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))",
+          start: "hsl(var(--accent))", 
+          end: "hsl(var(--accent-end))"
+        },
+        popover: {
+          DEFAULT: "hsl(var(--popover))",
+          foreground: "hsl(var(--popover-foreground))",
+        },
+        card: {
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
+        },
       },
       fontFamily: {
-        body: ['Inter', 'sans-serif'], // Changed from 'sans' and var(--font-inter)
-        headline: ['Poppins', 'sans-serif'], // Changed from 'display' and var(--font-poppins)
+        body: ['Inter', 'sans-serif'],
+        headline: ['Poppins', 'sans-serif'],
+      },
+      borderRadius: { // Standard ShadCN border radius setup
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
       },
     },
   },
-  plugins: [], // User specified empty plugins array, removing tailwindcss-animate
+  plugins: [], // Preserving user's empty plugins array
 };
 export default config;
