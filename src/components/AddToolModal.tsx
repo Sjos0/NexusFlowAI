@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Plus, X } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface AddToolModalProps {
   onClose: () => void;
@@ -56,8 +57,22 @@ export function AddToolModal({ onClose, onAdd, categoryTitle }: AddToolModalProp
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex justify-center items-center z-50" onClick={onClose}>
-      <div className="bg-card p-6 rounded-lg shadow-xl w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      className="fixed inset-0 bg-black/80 flex justify-center items-center z-50"
+      onClick={onClose} // Allow closing by clicking backdrop
+    >
+      <motion.div
+        initial={{ scale: 0.95, y: 20 }}
+        animate={{ scale: 1, y: 0 }}
+        exit={{ scale: 0.95, y: 20, opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        className="bg-card p-6 rounded-lg shadow-xl w-full max-w-lg"
+        onClick={(e) => e.stopPropagation()} // Prevents closing when clicking inside the modal
+      >
         <h2 className="font-headline text-2xl mb-6 text-foreground">Adicionar em {categoryTitle}</h2>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
@@ -127,7 +142,7 @@ export function AddToolModal({ onClose, onAdd, categoryTitle }: AddToolModalProp
             </Button>
           </div>
         </form>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

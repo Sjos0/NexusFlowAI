@@ -1,6 +1,7 @@
 // src/components/MacroView.tsx
 import type { GeneratedPlan } from "@/lib/types";
 import { Plus } from "lucide-react";
+import { motion } from 'framer-motion';
 
 interface MacroViewProps {
   plan: GeneratedPlan;
@@ -24,7 +25,12 @@ const Section = ({ title, items, colorClass }: { title: string, items: string[],
 
 export function MacroView({ plan }: MacroViewProps) {
   return (
-    <div className="mt-6 bg-card p-4 rounded-lg space-y-4 shadow-md">
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, ease: "easeOut" }}
+      className="mt-6 bg-card p-4 rounded-lg space-y-4 shadow-md"
+    >
       <input 
         type="text" 
         defaultValue={plan.macroName}
@@ -39,6 +45,6 @@ export function MacroView({ plan }: MacroViewProps) {
         <Section title="Ações" items={plan.actions} colorClass="bg-blue-600" />
         <Section title="Restrições" items={plan.constraints} colorClass="bg-green-600" />
       </div>
-    </div>
+    </motion.div>
   );
 }

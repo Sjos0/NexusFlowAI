@@ -2,6 +2,7 @@
 'use client'; 
 
 import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ToolColumn } from "@/components/ToolColumn";
 import { ToolCard } from "@/components/ToolCard";
 import { AddToolModal } from '@/components/AddToolModal';
@@ -67,24 +68,58 @@ export default function Home() {
         
         <div className="flex-grow grid grid-cols-1 md:grid-cols-3 gap-6">
           <ToolColumn title="Gatilhos" icon={Zap} onAdd={() => handleOpenModal('triggers')}>
-            {triggers.map(tool => 
-              <ToolCard key={tool.id} name={tool.name} subOptions={tool.subOptions} onDelete={() => removeTool('triggers', tool.id)} />
-            )}
-            {triggers.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">Nenhum gatilho adicionado.</p>}
+            <AnimatePresence>
+              {triggers.map(tool => 
+                <motion.div
+                  key={tool.id}
+                  layout
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <ToolCard name={tool.name} subOptions={tool.subOptions} onDelete={() => removeTool('triggers', tool.id)} />
+                </motion.div>
+              )}
+              {triggers.length === 0 && !isModalOpen && ( // Conditionally render placeholder
+                 <motion.p 
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                    className="text-sm text-muted-foreground text-center py-4">Nenhum gatilho adicionado.
+                 </motion.p>
+              )}
+            </AnimatePresence>
           </ToolColumn>
 
           <ToolColumn title="Ações" icon={Target} onAdd={() => handleOpenModal('actions')}>
-            {actions.map(tool => 
-              <ToolCard key={tool.id} name={tool.name} subOptions={tool.subOptions} onDelete={() => removeTool('actions', tool.id)} />
-            )}
-             {actions.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">Nenhuma ação adicionada.</p>}
+            <AnimatePresence>
+              {actions.map(tool => 
+                 <motion.div key={tool.id} layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3 }}>
+                  <ToolCard name={tool.name} subOptions={tool.subOptions} onDelete={() => removeTool('actions', tool.id)} />
+                </motion.div>
+              )}
+              {actions.length === 0 && !isModalOpen && (
+                 <motion.p 
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                    className="text-sm text-muted-foreground text-center py-4">Nenhuma ação adicionada.
+                 </motion.p>
+              )}
+            </AnimatePresence>
           </ToolColumn>
 
           <ToolColumn title="Restrições" icon={ShieldCheck} onAdd={() => handleOpenModal('constraints')}>
-            {constraints.map(tool => 
-              <ToolCard key={tool.id} name={tool.name} subOptions={tool.subOptions} onDelete={() => removeTool('constraints', tool.id)} />
-            )}
-            {constraints.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">Nenhuma restrição adicionada.</p>}
+            <AnimatePresence>
+              {constraints.map(tool => 
+                <motion.div key={tool.id} layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3 }}>
+                  <ToolCard name={tool.name} subOptions={tool.subOptions} onDelete={() => removeTool('constraints', tool.id)} />
+                </motion.div>
+              )}
+              {constraints.length === 0 && !isModalOpen && (
+                 <motion.p 
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                    className="text-sm text-muted-foreground text-center py-4">Nenhuma restrição adicionada.
+                 </motion.p>
+              )}
+            </AnimatePresence>
           </ToolColumn>
         </div>
 
@@ -93,13 +128,15 @@ export default function Home() {
         </footer>
       </main>
 
-      {isModalOpen && modalCategory && (
-        <AddToolModal
-          onClose={handleCloseModal}
-          onAdd={handleAddTool}
-          categoryTitle={categoryTitles[modalCategory]}
-        />
-      )}
+      <AnimatePresence>
+        {isModalOpen && modalCategory && (
+          <AddToolModal
+            onClose={handleCloseModal}
+            onAdd={handleAddTool}
+            categoryTitle={categoryTitles[modalCategory]}
+          />
+        )}
+      </AnimatePresence>
     </>
   );
 }
