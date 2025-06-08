@@ -8,12 +8,13 @@ import { X, Zap, Target, ShieldCheck, Database } from 'lucide-react';
 import { useToolsStore } from '@/stores/useToolsStore';
 import type { ToolCategory, Tool, SubOption, Variable } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { ToolCard } from '@/components'; // Added import for ToolCard
 
 const categoryColors: Record<ToolCategory, string> = {
-  triggers: 'hsl(var(--destructive))',
-  actions: 'hsl(var(--primary))',
-  constraints: 'hsl(145 70% 40%)', 
-  variables: 'hsl(45 90% 50%)' // A distinct yellow, e.g., yellow-500
+  triggers: 'hsl(var(--destructive))', // Typically red
+  actions: 'hsl(var(--primary))',    // Typically blue or primary theme color
+  constraints: 'hsl(145 70% 40%)', // A distinct green
+  variables: 'hsl(45 90% 50%)' // A distinct yellow, e.g., gold or amber
 };
 
 interface KnowledgeBasePanelProps {
@@ -28,7 +29,7 @@ interface KnowledgeBasePanelProps {
   onOpenConfirmSubOptionDelete: (category: ToolCategory, toolId: string, subOptionId: string, subOptionName: string) => void;
   onOpenAddVariable: () => void;
   onOpenEditVariable: (variable: Variable) => void;
-  onOpenConfirmVariableDelete: (variableId: string, variableName: string) => void;
+  onOpenConfirmVariableDelete: (variableId: string, variableName?: string) => void;
 }
 
 export function KnowledgeBasePanel({ 
@@ -101,7 +102,7 @@ export function KnowledgeBasePanel({
                       variables={data as Variable[]}
                       onAdd={onOpenAddVariable}
                       onEdit={onOpenEditVariable}
-                      onDelete={onOpenConfirmVariableDelete}
+                      onDelete={(variableId, variableName) => onOpenConfirmVariableDelete(variableId, variableName)}
                     />
                   ) : (
                     <ToolColumn 
