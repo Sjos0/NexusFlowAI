@@ -4,9 +4,10 @@ export * from './AddToolModal';
 export * from './AIPromptArea';
 export * from './AutomationPlanView';
 export * from './ConfirmationModal';
-export * from './EditSubOptionModal'; // Added EditSubOptionModal
+export * from './EditSubOptionModal';
 export * from './EditToolModal';
 export * from './KnowledgeBasePanel';
 export * from './ManageTelasModal';
+export * from './SuggestionTicker'; // Added SuggestionTicker
 export * from './ToolCard';
 export * from './ToolColumn';

@@ -1,38 +1,72 @@
 // src/components/AIPromptArea.tsx
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
-import { CornerDownLeft, Terminal } from 'lucide-react'; // Added Terminal for error icon
+import { CornerDownLeft, Terminal } from 'lucide-react';
 import { useToolsStore } from '@/stores/useToolsStore';
-import type { GeneratedPlan, ChatMessage } from '@/lib/types';
+import type { GeneratedPlan, ChatMessage, Tool, ToolCategory } from '@/lib/types';
 import { AutomationPlanView } from './AutomationPlanView';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; // For better error display
+import { SuggestionTicker } from './SuggestionTicker'; // Import the new component
+import { useHasMounted } from '@/hooks/useHasMounted'; // To prevent hydration issues with window
 
 export function AIPromptArea() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
-  
-  // Get all tools using getState for sending with API request
-  // This is okay if tools don't change during a single chat session or if a refresh is acceptable
-  const allTools = useToolsStore.getState(); 
-  const inputRef = useRef<HTMLTextAreaElement>(null); // For focusing input
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const hasMounted = useHasMounted();
+
+  // Use a selector to get specific parts of the store
+  // This prevents re-renders if other parts of the store change
+  const currentTools = useToolsStore(state => ({
+    triggers: state.triggers,
+    actions: state.actions,
+    constraints: state.constraints,
+  }));
+
+  // Trigger suggestion loading when tools change and component has mounted
+  useEffect(() => {
+    if (!hasMounted) return;
+
+    // Check if there are actual tools to avoid empty dispatches
+    const hasTriggers = currentTools.triggers && currentTools.triggers.length > 0;
+    const hasActions = currentTools.actions && currentTools.actions.length > 0;
+    // const hasConstraints = currentTools.constraints && currentTools.constraints.length > 0; // Optional: include constraints if they influence suggestions
+
+    if (hasTriggers || hasActions /* || hasConstraints */) {
+      // Dispatch event with only the necessary tool data
+      const event = new CustomEvent('load-suggestions', { 
+        detail: {
+          triggers: currentTools.triggers,
+          actions: currentTools.actions,
+          constraints: currentTools.constraints,
+        } 
+      });
+      window.dispatchEvent(event);
+    }
+  }, [currentTools.triggers, currentTools.actions, currentTools.constraints, hasMounted]);
+
 
   useEffect(() => {
-    // Scroll to bottom of chat
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTo({ top: chatContainerRef.current.scrollHeight, behavior: 'smooth' });
     }
   }, [messages]);
 
   useEffect(() => {
-    // Focus input on initial load
-    inputRef.current?.focus();
-  }, []);
+    if (hasMounted) {
+        inputRef.current?.focus();
+    }
+  }, [hasMounted]);
+
+  const handleUseSuggestion = (prompt: string) => {
+    setInput(prompt);
+    inputRef.current?.focus(); // Focus input after using suggestion
+  };
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -46,7 +80,7 @@ export function AIPromptArea() {
     
     const updatedMessages = [...messages, newUserMessage];
     setMessages(updatedMessages);
-    setInput(''); // Clear input after sending
+    setInput('');
     setIsLoading(true);
 
     try {
@@ -54,19 +88,18 @@ export function AIPromptArea() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          messages: updatedMessages, // Send the whole history including the new user message
-          tools: { // Ensure tools are in the expected structure
-            triggers: allTools.triggers,
-            actions: allTools.actions,
-            constraints: allTools.constraints,
-          } 
+          messages: updatedMessages, 
+          tools: { // Pass all tools from the store
+            triggers: useToolsStore.getState().triggers,
+            actions: useToolsStore.getState().actions,
+            constraints: useToolsStore.getState().constraints,
+          }
         }),
       });
       
       const responseData = await res.json();
 
       if (!res.ok) {
-        // Use the error message from the API if available
         throw new Error(responseData.error || `API Error: ${res.status} ${res.statusText}`);
       }
 
@@ -83,12 +116,10 @@ export function AIPromptArea() {
       const errorAiMessage: ChatMessage = {
         id: crypto.randomUUID(),
         role: 'model',
-        // Present the error as a GeneratedPlan so AutomationPlanView can try to render it
-        // or as a simple text message within the AutomationPlanView if it's just a string
         content: { 
           macroName: "Erro de Comunicação", 
           steps: [{ 
-            type: "AÇÃO", // Or some other generic type
+            type: "AÇÃO",
             toolName: "Diagnóstico de Erro", 
             chosenSubOptions: [], 
             detailedSteps: `**Falha ao processar seu pedido:**\n\n- ${errorMessage}` 
@@ -98,7 +129,7 @@ export function AIPromptArea() {
       setMessages(prev => [...prev, errorAiMessage]);
     } finally {
       setIsLoading(false);
-      inputRef.current?.focus(); // Re-focus input
+      inputRef.current?.focus();
     }
   };
   
@@ -112,7 +143,7 @@ export function AIPromptArea() {
   return (
     <div className="w-full max-w-4xl mx-auto flex flex-col h-full">
       {/* Chat History */}
-      <div ref={chatContainerRef} className="flex-grow overflow-y-auto pr-2 space-y-4 pb-4"> {/* Added pb-4 */}
+      <div ref={chatContainerRef} className="flex-grow overflow-y-auto pr-2 space-y-4 pb-4">
         <AnimatePresence initial={false}>
           {messages.map((msg, index) => (
             <motion.div 
@@ -125,12 +156,12 @@ export function AIPromptArea() {
                 type: "spring", 
                 stiffness: 260, 
                 damping: 20,
-                delay: messages.length > 1 && index === messages.length -1 ? 0.1 : 0 // Only delay if not the very first message
+                delay: messages.length > 1 && index === messages.length -1 ? 0.1 : 0
               }}
               className={cn("flex", msg.role === 'user' ? 'justify-end' : 'justify-start')}
             >
               <div className={cn(
-                "max-w-[85%] sm:max-w-[75%] p-0", // p-0 on wrapper
+                "max-w-[85%] sm:max-w-[75%] p-0",
                  msg.role === 'user' ? "self-end" : "self-start"
               )}>
                 {msg.role === 'user' ? (
@@ -138,8 +169,6 @@ export function AIPromptArea() {
                     <p className="whitespace-pre-wrap">{msg.content as string}</p>
                   </div>
                 ) : (
-                  // AutomationPlanView expects a 'plan' prop which is GeneratedPlan
-                  // It will now handle rendering the AI's plan or the structured error message
                   <AutomationPlanView plan={msg.content as GeneratedPlan} />
                 )}
               </div>
@@ -163,10 +192,11 @@ export function AIPromptArea() {
         )}
       </div>
 
-      {/* Input Area */}
+      {/* Suggestion & Input Area */}
       <div className="flex-shrink-0 pt-4 border-t border-border">
+        {hasMounted && <SuggestionTicker onUseSuggestion={handleUseSuggestion} />}
         <form onSubmit={handleSubmit}>
-          <div className="bg-card rounded-lg p-2 shadow-xl flex items-end border border-border">
+          <div className="bg-card rounded-lg p-2 shadow-xl flex items-end border border-border mt-2"> {/* Added mt-2 for spacing after ticker */}
             <TextareaAutosize
               ref={inputRef}
               value={input}
