@@ -11,13 +11,14 @@ import {
   KnowledgeBasePanel, 
   AIPromptArea, 
   ManageTelasModal,
-  EditToolModal // Added EditToolModal
+  EditToolModal,
+  EditSubOptionModal // Added EditSubOptionModal
 } from '@/components';
 // Util & Hook Imports
 import { useToolsStore } from '@/stores/useToolsStore';
-import type { ToolCategory, Tool, SubOption, Tela } from '@/lib/types';
+import type { ToolCategory, Tool, SubOption, Tela } from '@/lib/types'; // Ensure Tela is imported
 import { BotMessageSquare } from 'lucide-react';
-import { Button } from "@/components/ui/button";
+import { Button as ShadButton } from "@/components/ui/button"; // Alias for ShadCN button if needed
 
 export default function Home() {
   const { hydrate, updateTool, removeTool, addTool } = useToolsStore();
@@ -28,7 +29,7 @@ export default function Home() {
 
   // State for Modals
   const [addToolModalState, setAddToolModalState] = useState({ isOpen: false, category: null as ToolCategory | null, categoryTitle: '' });
-  const [confirmModalState, setConfirmModalState] = useState<{ isOpen: boolean; toolId: string | null; category: ToolCategory | null; toolName: string | null }>({ isOpen: false, toolId: null, category: null, toolName: null });
+  const [confirmToolDeleteModalState, setConfirmToolDeleteModalState] = useState<{ isOpen: boolean; toolId: string | null; category: ToolCategory | null; toolName: string | null }>({ isOpen: false, toolId: null, category: null, toolName: null });
   const [addSubOptionModalState, setAddSubOptionModalState] = useState<{ isOpen: boolean; tool: (Tool & { category: ToolCategory }) | null }>({ isOpen: false, tool: null });
   
   const [manageTelasModalState, setManageTelasModalState] = useState<{
@@ -42,6 +43,21 @@ export default function Home() {
     isOpen: boolean;
     tool: Tool & { category: ToolCategory } | null;
   }>({ isOpen: false, tool: null });
+
+  const [editSubOptionModalState, setEditSubOptionModalState] = useState<{ 
+    isOpen: boolean; 
+    toolId: string; 
+    category: ToolCategory; 
+    subOption: SubOption 
+  } | null>(null);
+
+  const [confirmSubOptionDeleteModalState, setConfirmSubOptionDeleteModalState] = useState<{ 
+    isOpen: boolean; 
+    toolId: string; 
+    category: ToolCategory; 
+    subOptionId: string;
+    subOptionName: string;
+  } | null>(null);
   
   const [isKbOpen, setIsKbOpen] = useState(false);
 
@@ -64,15 +80,15 @@ export default function Home() {
     setAddToolModalState({ isOpen: false, category: null, categoryTitle: '' });
   };
   
-  const handleOpenConfirmDelete = (category: ToolCategory, tool: Tool) => {
-    setConfirmModalState({ isOpen: true, toolId: tool.id, category, toolName: tool.name });
+  const handleOpenConfirmToolDelete = (category: ToolCategory, tool: Tool) => {
+    setConfirmToolDeleteModalState({ isOpen: true, toolId: tool.id, category, toolName: tool.name });
   };
   
-  const handleConfirmDelete = () => {
-    if (confirmModalState.toolId && confirmModalState.category) {
-      removeTool(confirmModalState.category, confirmModalState.toolId);
+  const handleConfirmToolDelete = () => {
+    if (confirmToolDeleteModalState.toolId && confirmToolDeleteModalState.category) {
+      removeTool(confirmToolDeleteModalState.category, confirmToolDeleteModalState.toolId);
     }
-    setConfirmModalState({ isOpen: false, toolId: null, category: null, toolName: null });
+    setConfirmToolDeleteModalState({ isOpen: false, toolId: null, category: null, toolName: null });
   };
 
   const handleOpenAddSubOption = (category: ToolCategory, tool: Tool) => {
@@ -110,7 +126,6 @@ export default function Home() {
     );
 
     updateTool(category, toolId, { subOptions: newSubOptionsForTool });
-    // No need to setManageTelasModalState here as onClose in the modal will handle closing
   };
 
   const handleOpenEditTool = (category: ToolCategory, tool: Tool) => {
@@ -125,6 +140,34 @@ export default function Home() {
     setEditToolModalState({ isOpen: false, tool: null });
   };
 
+  const handleOpenEditSubOption = (category: ToolCategory, tool: Tool, subOption: SubOption) => {
+    setEditSubOptionModalState({ isOpen: true, toolId: tool.id, category, subOption });
+  };
+
+  const handleEditSubOptionSave = (newName: string) => {
+    if (!editSubOptionModalState) return;
+    const { toolId, category, subOption } = editSubOptionModalState;
+    const toolToUpdate = useToolsStore.getState()[category].find(t => t.id === toolId);
+    if (!toolToUpdate) return;
+    const newSubOptions = toolToUpdate.subOptions.map(so => so.id === subOption.id ? { ...so, name: newName } : so);
+    updateTool(category, toolId, { subOptions: newSubOptions });
+    setEditSubOptionModalState(null);
+  };
+
+  const handleOpenConfirmSubOptionDelete = (category: ToolCategory, toolId: string, subOptionId: string, subOptionName: string) => {
+    setConfirmSubOptionDeleteModalState({ isOpen: true, toolId, category, subOptionId, subOptionName });
+  };
+
+  const handleConfirmSubOptionDelete = () => {
+    if (!confirmSubOptionDeleteModalState) return;
+    const { toolId, category, subOptionId } = confirmSubOptionDeleteModalState;
+    const toolToUpdate = useToolsStore.getState()[category].find(t => t.id === toolId);
+    if (!toolToUpdate) return;
+    const newSubOptions = toolToUpdate.subOptions.filter(so => so.id !== subOptionId);
+    updateTool(category, toolId, { subOptions: newSubOptions });
+    setConfirmSubOptionDeleteModalState(null);
+  };
+
   return (
     <>
       <main className="flex flex-col h-screen bg-background p-4 lg:p-6 overflow-hidden">
@@ -137,14 +180,14 @@ export default function Home() {
             </h1>
             <p className="text-muted-foreground">Seu co-piloto de automação para MacroDroid</p>
           </div>
-          <Button 
+          <ShadButton 
             variant="outline"
             onClick={() => setIsKbOpen(true)}
             className="font-semibold"
           >
             <BotMessageSquare className="mr-2 h-5 w-5" />
             Banco de Conhecimento
-          </Button>
+          </ShadButton>
         </header>
         
         <div className="flex-grow flex justify-center items-stretch py-4"> 
@@ -156,10 +199,12 @@ export default function Home() {
         isOpen={isKbOpen} 
         onClose={() => setIsKbOpen(false)}
         onOpenAddTool={handleOpenAddToolModal}
-        onOpenConfirmDelete={handleOpenConfirmDelete}
+        onOpenConfirmToolDelete={handleOpenConfirmToolDelete}
         onOpenAddSubOption={handleOpenAddSubOption}
         onOpenManageTelas={(category, tool, subOption) => handleOpenManageTelas(tool.id, category, subOption)}
-        onOpenEditTool={handleOpenEditTool} // Pass new prop
+        onOpenEditTool={handleOpenEditTool}
+        onOpenEditSubOption={handleOpenEditSubOption}
+        onOpenConfirmSubOptionDelete={handleOpenConfirmSubOptionDelete}
       />
 
       <AnimatePresence>
@@ -170,12 +215,12 @@ export default function Home() {
             categoryTitle={addToolModalState.categoryTitle}
           />
         )}
-        {confirmModalState.isOpen && (
+        {confirmToolDeleteModalState.isOpen && (
           <ConfirmationModal
-            onCancel={() => setConfirmModalState({ isOpen: false, toolId: null, category: null, toolName: null })}
-            onConfirm={handleConfirmDelete}
-            message={`Tem certeza que deseja deletar a ferramenta "${confirmModalState.toolName || 'esta ferramenta'}"? Esta ação não pode ser desfeita.`}
-            title="Confirmar Exclusão"
+            onCancel={() => setConfirmToolDeleteModalState({ isOpen: false, toolId: null, category: null, toolName: null })}
+            onConfirm={handleConfirmToolDelete}
+            message={`Tem certeza que deseja deletar a ferramenta "${confirmToolDeleteModalState.toolName || 'esta ferramenta'}"? Esta ação não pode ser desfeita.`}
+            title="Confirmar Exclusão de Ferramenta"
           />
         )}
         {addSubOptionModalState.isOpen && addSubOptionModalState.tool && (
@@ -197,6 +242,21 @@ export default function Home() {
             onClose={() => setEditToolModalState({ isOpen: false, tool: null })}
             onSave={handleEditToolSave}
             tool={editToolModalState.tool}
+          />
+        )}
+        {editSubOptionModalState?.isOpen && (
+          <EditSubOptionModal 
+            onClose={() => setEditSubOptionModalState(null)} 
+            onSave={handleEditSubOptionSave} 
+            subOption={editSubOptionModalState.subOption} 
+          />
+        )}
+        {confirmSubOptionDeleteModalState?.isOpen && (
+          <ConfirmationModal 
+            onCancel={() => setConfirmSubOptionDeleteModalState(null)} 
+            onConfirm={handleConfirmSubOptionDelete} 
+            message={`Tem certeza que deseja deletar a sub-opção "${confirmSubOptionDeleteModalState.subOptionName || 'esta sub-opção'}"?`} 
+            title="Confirmar Exclusão de Sub-Opção"
           />
         )}
       </AnimatePresence>

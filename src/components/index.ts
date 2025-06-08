@@ -4,7 +4,8 @@ export * from './AddToolModal';
 export * from './AIPromptArea';
 export * from './AutomationPlanView';
 export * from './ConfirmationModal';
-export * from './EditToolModal'; // Added EditToolModal
+export * from './EditSubOptionModal'; // Added EditSubOptionModal
+export * from './EditToolModal';
 export * from './KnowledgeBasePanel';
 export * from './ManageTelasModal';
 export * from './ToolCard';

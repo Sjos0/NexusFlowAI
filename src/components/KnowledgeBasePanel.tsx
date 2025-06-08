@@ -9,33 +9,45 @@ import { useToolsStore } from '@/stores/useToolsStore';
 import type { ToolCategory, Tool, SubOption } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
+// Define colors at the top
+const categoryColors: Record<ToolCategory, string> = {
+  triggers: 'hsl(var(--destructive))', // Typically red-ish
+  actions: 'hsl(var(--primary))',  // Typically blue or teal
+  constraints: 'hsl(145 70% 40%)' // A distinct green (e.g., HSL for green-600)
+};
+
+
 interface KnowledgeBasePanelProps {
   isOpen: boolean;
   onClose: () => void;
   onOpenAddTool: (category: ToolCategory) => void;
-  onOpenConfirmDelete: (category: ToolCategory, tool: Tool) => void;
+  onOpenConfirmToolDelete: (category: ToolCategory, tool: Tool) => void; // Changed from id to tool
   onOpenAddSubOption: (category: ToolCategory, tool: Tool) => void;
   onOpenManageTelas: (category: ToolCategory, tool: Tool, subOption: SubOption) => void;
-  onOpenEditTool: (category: ToolCategory, tool: Tool) => void; // New prop
+  onOpenEditTool: (category: ToolCategory, tool: Tool) => void;
+  onOpenEditSubOption: (category: ToolCategory, tool: Tool, subOption: SubOption) => void;
+  onOpenConfirmSubOptionDelete: (category: ToolCategory, toolId: string, subOptionId: string, subOptionName: string) => void;
 }
 
 export function KnowledgeBasePanel({ 
   isOpen, 
   onClose, 
   onOpenAddTool, 
-  onOpenConfirmDelete, 
+  onOpenConfirmToolDelete, 
   onOpenAddSubOption,
   onOpenManageTelas,
-  onOpenEditTool // New prop
+  onOpenEditTool,
+  onOpenEditSubOption,
+  onOpenConfirmSubOptionDelete
 }: KnowledgeBasePanelProps) {
   const triggers = useToolsStore(state => state.triggers);
   const actions = useToolsStore(state => state.actions);
   const constraints = useToolsStore(state => state.constraints);
 
   const allColumnsData = [
-    { title: "Gatilhos", icon: Zap, category: "triggers" as ToolCategory, data: triggers },
-    { title: "Ações", icon: Target, category: "actions" as ToolCategory, data: actions },
-    { title: "Restrições", icon: ShieldCheck, category: "constraints" as ToolCategory, data: constraints },
+    { title: "Gatilhos", icon: Zap, category: "triggers" as ToolCategory, data: triggers, color: categoryColors.triggers },
+    { title: "Ações", icon: Target, category: "actions" as ToolCategory, data: actions, color: categoryColors.actions },
+    { title: "Restrições", icon: ShieldCheck, category: "constraints" as ToolCategory, data: constraints, color: categoryColors.constraints },
   ];
 
   return (
@@ -72,8 +84,14 @@ export function KnowledgeBasePanel({
             </p>
             <ScrollArea className="flex-grow">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6">
-                {allColumnsData.map(({ title, icon, category, data }) => (
-                  <ToolColumn key={category} title={title} icon={icon} onAdd={() => onOpenAddTool(category)}>
+                {allColumnsData.map(({ title, icon, category, data, color }) => (
+                  <ToolColumn 
+                    key={category} 
+                    title={title} 
+                    icon={icon} 
+                    onAdd={() => onOpenAddTool(category)} 
+                    accentColor={color}
+                  >
                     {data.length === 0 && (
                        <motion.p 
                         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -95,10 +113,13 @@ export function KnowledgeBasePanel({
                           <ToolCard
                             name={tool.name}
                             subOptions={tool.subOptions}
-                            onDelete={() => onOpenConfirmDelete(category, tool)}
+                            onDelete={() => onOpenConfirmToolDelete(category, tool)}
+                            onEdit={() => onOpenEditTool(category, tool)}
                             onAddSubOption={() => onOpenAddSubOption(category, tool)}
+                            accentColor={color}
+                            onEditSubOption={(subOption) => onOpenEditSubOption(category, tool, subOption)}
+                            onDeleteSubOption={(subOptionId) => onOpenConfirmSubOptionDelete(category, tool.id, subOptionId, tool.subOptions.find(so => so.id === subOptionId)?.name || 'esta sub-opção')}
                             onManageSubOption={(subOption) => onOpenManageTelas(category, tool, subOption)}
-                            onEdit={() => onOpenEditTool(category, tool)} // Pass new prop
                           />
                         </motion.div>
                       ))}
