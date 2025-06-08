@@ -1,7 +1,7 @@
 // src/app/api/generate-plan/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { generate } from 'genkit/ai'; // Direct import for generate
-import { googleAI } from '@genkit-ai/google-ai'; // Direct import for googleAI model provider
+import { googleAI } from '@genkit-ai/googleai'; // Corrected import for googleAI model provider
 import type { Tool, Variable, PlanStep, GeneratedPlan } from '@/lib/types'; // Ensure all necessary types are here
 import { WIKI_CONTEXT } from '@/lib/ai/wikiContext';
 
