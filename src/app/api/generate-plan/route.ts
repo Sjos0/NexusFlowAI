@@ -1,8 +1,9 @@
+
 // src/app/api/generate-plan/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { ai } from '@/ai/genkit';
 import type { Message } from 'genkit/ai';
-import type { Tool, ChatMessage, GeneratedPlan, Variable } from '@/lib/types';
+import type { Tool, ChatMessage, GeneratedPlan, Variable, ToolCategory } from '@/lib/types'; // Added ToolCategory
 
 const formatTools = (tools: Tool[]): string => {
   if (!tools || tools.length === 0) return 'Nenhum';
@@ -40,8 +41,9 @@ export async function POST(req: NextRequest) {
     const genkitHistory: Message[] = messages.slice(0, -1).map((msg: ChatMessage): Message => {
       if (msg.role === 'user') {
         return { role: msg.role, content: [{ text: msg.content as string }] };
-      } else {
+      } else { // model role
         const planContent = msg.content as GeneratedPlan;
+        // Summarize model responses to save tokens and keep context focused
         return { role: msg.role, content: [{ text: `Eu gerei um plano chamado "${planContent.macroName}". Detalhes omitidos.` }] };
       }
     });
@@ -52,11 +54,17 @@ export async function POST(req: NextRequest) {
     }
     const currentPromptText = lastMessage.content;
 
+    // Combine system instructions, available tools/variables, and current user prompt
+    const contextualInformation = `\n\nFERRAMENTAS E VARIÁVEIS DISPONÍVEIS PARA ESTA TAREFA:\n${availableToolsAndVariables}\n\n`;
+    const userRequestHeader = `COM BASE NO HISTÓRICO DA CONVERSA (se houver, fornecido separadamente) E NAS FERRAMENTAS E VARIÁVEIS ACIMA, ATENDA AO SEGUINTE PEDIDO DO USUÁRIO:\n`;
+    
+    const fullPromptForLLM = `${masterPrompt}${contextualInformation}${userRequestHeader}${currentPromptText}`;
+
     const llmResponse = await ai.generate({
       model: 'googleai/gemini-2.5-flash-preview-05-20',
-      system: `${masterPrompt}\n\nDisponível para este turno: ${availableToolsAndVariables}`, 
+      // The 'system' parameter is removed. System instructions are now part of 'fullPromptForLLM'.
       history: genkitHistory, 
-      prompt: currentPromptText, 
+      prompt: fullPromptForLLM, 
       config: { temperature: 0.6 },
     });
     
@@ -65,11 +73,13 @@ export async function POST(req: NextRequest) {
       const reason = mainCandidate?.finishReason || 'UNKNOWN_REASON';
       const messageText = mainCandidate?.output?.text || 'Nenhuma mensagem de saída do LLM.';
       console.error(`Falha na geração do LLM. Razão: ${reason}. Saída: ${messageText}`, llmResponse);
-      throw new Error(`Falha na geração da IA: ${reason}. ${messageText}`);
+      // Send a more specific error if possible, otherwise generic.
+      const detail = llmResponse.candidates.map(c => `Candidate finish: ${c.finishReason}, Message: ${c.finishMessage || 'N/A'}`).join('; ');
+      const errorMessage = `Falha na geração da IA: ${reason}. ${messageText}. Details: ${detail}`;
+      return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 
     const responseTextRaw = mainCandidate.output.text;
-    
     const responseText = responseTextRaw.replace(/```json/g, '').replace(/```/g, '').trim();
     let plan;
 
@@ -83,21 +93,21 @@ export async function POST(req: NextRequest) {
           plan = JSON.parse(jsonMatch[0]);
         } catch (nestedParseError) {
           console.error("Erro ao parsear JSON extraído:", nestedParseError, "Conteúdo:", jsonMatch[0]);
-          throw new Error('A IA retornou uma resposta em formato JSON inválido, mesmo após tentativa de extração.');
+          return NextResponse.json({ error: 'A IA retornou uma resposta em formato JSON inválido, mesmo após tentativa de extração.' }, { status: 500 });
         }
       } else {
-        throw new Error('A IA retornou uma resposta que não contém um objeto JSON válido.');
+        return NextResponse.json({ error: 'A IA retornou uma resposta que não contém um objeto JSON válido.' }, { status: 500 });
       }
     }
 
     if (!plan.macroName || !Array.isArray(plan.steps)) {
         console.error("Estrutura do plano inválida recebida da IA:", plan);
-        throw new Error('A IA retornou um plano com formato JSON esperado, mas com campos ausentes ou tipos incorretos.');
+        return NextResponse.json({ error: 'A IA retornou um plano com formato JSON esperado, mas com campos ausentes ou tipos incorretos.' }, { status: 500 });
     }
      plan.steps.forEach((step: any, index: number) => {
         if (!step.type || !step.toolName || !Array.isArray(step.chosenSubOptions) || typeof step.detailedSteps !== 'string') {
             console.error(`Estrutura do passo ${index} inválida:`, step);
-            throw new Error(`A IA retornou um plano com um passo (${index}) malformado.`);
+            return NextResponse.json({ error: `A IA retornou um plano com um passo (${index}) malformado.` }, { status: 500 });
         }
     });
 
@@ -107,11 +117,13 @@ export async function POST(req: NextRequest) {
     console.error("Erro na API /api/generate-plan:", error);
     let errorMessage = 'Ocorreu um erro ao gerar o plano JSON.';
     if (error instanceof Error) {
-        errorMessage = error.message;
+        errorMessage = error.message; // This will be "system role is not supported" if that's the root cause from Genkit
     }
+    // Ensure the error response is always JSON
     return NextResponse.json(
-      { error: errorMessage, details: error instanceof Error ? String(error) : "Detalhes não disponíveis" },
+      { error: errorMessage, details: error instanceof Error ? String(error.stack) : "Detalhes não disponíveis" },
       { status: 500 }
     );
   }
 }
+
