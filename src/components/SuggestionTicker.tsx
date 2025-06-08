@@ -26,6 +26,8 @@ export function SuggestionTicker({ onUseSuggestion }: SuggestionTickerProps) {
   const loadSuggestions = useCallback(async (tools: any) => {
     if (isLoading) return;
     setIsLoading(true);
+    setIsVisible(false); // Hide while loading new suggestions
+
     try {
       const res = await fetch('/api/generate-suggestions', {
         method: 'POST',
@@ -38,30 +40,34 @@ export function SuggestionTicker({ onUseSuggestion }: SuggestionTickerProps) {
       if (res.ok && Array.isArray(data) && data.length > 0) {
         setSuggestions(data);
         setCurrentIndex(0);
-        setIsVisible(true);
+        setIsVisible(true); // Make first suggestion visible immediately after loading
       } else if (!res.ok) {
         let errorDetail = "Unknown API error";
-        if (data && typeof data === 'object' && data.error) {
-          errorDetail = typeof data.error === 'string' ? data.error : JSON.stringify(data.error);
-        } else if (data) { // Data exists but not in the expected {error: ...} format
-          errorDetail = `Received error response with unexpected data format: ${JSON.stringify(data)}`;
-        } else if (res.statusText) { // Fallback to status text if data is not helpful
+        if (data && typeof data === 'object') {
+            if (data.error) {
+                errorDetail = typeof data.error === 'string' ? data.error : JSON.stringify(data.error);
+            } else { 
+                errorDetail = `API responded with unexpected data format: ${JSON.stringify(data)}`;
+            }
+        } else if (data) { 
+            errorDetail = `API responded with non-object data: ${String(data)}`;
+        } else if(res.statusText) { 
             errorDetail = `API responded with status ${res.status}: ${res.statusText}`;
         }
         
-        // Ensure errorDetail is a string before concatenation
         const finalErrorDetailString = String(errorDetail);
-        console.error("Failed to load suggestions: " + finalErrorDetailString); // Line 51 with fix
+        console.error("Failed to load suggestions:", finalErrorDetailString); // Use multi-arg
         setSuggestions([]);
+        setIsVisible(false);
       } else {
-         // res.ok is true, but data is not a non-empty array or not an array
          setSuggestions([]);
+         setIsVisible(false);
       }
     } catch (error) {
-      // This catch block handles errors from fetch() itself (e.g. network error)
-      // or from res.json() if it fails to parse (e.g. response is not valid JSON)
-      console.error("Exception during suggestion loading: " + (error instanceof Error ? error.message : String(error)));
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error("Exception during suggestion loading:", errorMessage); // Use multi-arg
       setSuggestions([]);
+      setIsVisible(false);
     } finally {
       setIsLoading(false);
     }
@@ -84,11 +90,14 @@ export function SuggestionTicker({ onUseSuggestion }: SuggestionTickerProps) {
   }, [hasMounted, loadSuggestions]);
 
   useEffect(() => {
-    if (!hasMounted || suggestions.length === 0 || !isVisible) {
-      if (isVisible && suggestions.length === 0) { // If it was visible but suggestions cleared
-          setIsVisible(false);
-      }
-      return;
+    if (!hasMounted || suggestions.length === 0) {
+        if(isVisible) setIsVisible(false); // Ensure it's hidden if suggestions are cleared
+        return;
+    }
+    
+    // If suggestions are present, but not currently visible, make the first one visible.
+    if (!isVisible && suggestions.length > 0) {
+        setIsVisible(true);
     }
 
     const visibilityTimer = setTimeout(() => {
@@ -113,14 +122,14 @@ export function SuggestionTicker({ onUseSuggestion }: SuggestionTickerProps) {
   if (!hasMounted || (suggestions.length === 0 && !isLoading)) {
     return isLoading ? <div className="h-20 flex items-center justify-center text-muted-foreground text-sm">Carregando sugestões...</div> : null;
   }
-  if (suggestions.length === 0 && isLoading) { // Ensure loading is shown even if suggestions array is empty during load
+  if (suggestions.length === 0 && isLoading) { 
     return <div className="h-20 flex items-center justify-center text-muted-foreground text-sm">Carregando sugestões...</div>;
   }
 
   return (
     <div className="h-20 relative overflow-hidden my-2">
       <AnimatePresence mode="wait">
-        {isVisible && suggestions[currentIndex] && (
+        {isVisible && suggestions.length > 0 && suggestions[currentIndex] && (
           <motion.div
             key={currentIndex}
             initial={{ y: '100%', opacity: 0 }}
