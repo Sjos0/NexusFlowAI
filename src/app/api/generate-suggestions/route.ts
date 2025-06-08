@@ -1,14 +1,12 @@
+
 // src/app/api/generate-suggestions/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { ai } from '@/ai/genkit'; // Changed import
-import { googleAI } from '@genkit-ai/googleai';
+import { ai } from '@/ai/genkit';
 import type { Tool } from '@/lib/types';
 import '../../../../genkit.config';
 
 const formatToolsForSuggestion = (tools: Tool[]): string => {
   if (!tools || tools.length === 0) return 'Nenhum';
-  // Ensure subOptions and telas are handled if they exist, even if just taking tool name for now.
-  // For this prompt, only tool names are used as per user spec.
   return tools.map(t => t.name).join(', ');
 };
 
@@ -46,25 +44,33 @@ export async function POST(req: NextRequest) {
       Gere o array JSON com 5 sugestões agora.
     `;
 
-    const llmResponse = await ai.generate({ // Changed to ai.generate
-      model: 'googleai/gemini-2.5-flash-preview-05-20', // Corrected model specification
+    const llmResponse = await ai.generate({
+      model: 'googleai/gemini-2.5-flash-preview-05-20',
       prompt: masterPrompt,
-      config: { temperature: 0.8 }, // Higher temperature for more creativity
+      config: { temperature: 0.8 }, 
     });
     
-    let responseText = llmResponse.text();
-    if (!responseText) {
-        throw new Error('LLM returned an empty response for suggestions.');
+    const mainCandidate = llmResponse.candidates[0];
+    if (!mainCandidate || mainCandidate.finishReason !== 'STOP') {
+      const reason = mainCandidate?.finishReason || 'UNKNOWN_REASON';
+      const message = mainCandidate?.message || 'Nenhuma mensagem disponível do LLM.';
+      console.error(`Falha na geração do LLM para sugestões. Razão: ${reason}. Mensagem: ${message}`, llmResponse);
+      throw new Error(`Falha na geração de sugestões da IA: ${reason}. ${message}`);
     }
-    // Clean the response: remove potential markdown and ensure it's just the JSON array.
-    responseText = responseText.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
+
+    const responseTextRaw = mainCandidate.output?.text;
+    if (typeof responseTextRaw !== 'string') {
+      console.error('Resposta do LLM para sugestões não continha uma saída de texto válida.', mainCandidate.output);
+      throw new Error('A resposta da IA para sugestões não continha texto utilizável.');
+    }
+    
+    let responseText = responseTextRaw.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
     
     let suggestions;
     try {
         suggestions = JSON.parse(responseText);
     } catch (parseError) {
         console.error("Erro ao parsear JSON de sugestões da IA:", parseError, "Texto recebido:", responseText);
-        // Attempt to extract JSON if it's embedded
         const jsonMatch = responseText.match(/(\[[\s\S]*\]|\{[\s\S]*\})/);
         if (jsonMatch && jsonMatch[0]) {
             try {
@@ -82,13 +88,12 @@ export async function POST(req: NextRequest) {
         console.error("Sugestões da IA não são um array:", suggestions);
         throw new Error("A IA não retornou um array de sugestões válido.");
     }
-    suggestions.forEach((sug, index) => {
+    suggestions.forEach((sug: any, index: number) => { // Added 'any' type for sug temporarily
         if (typeof sug.title !== 'string' || typeof sug.prompt !== 'string') {
             console.error(`Sugestão ${index} inválida:`, sug);
             throw new Error(`A IA retornou uma sugestão (${index}) malformada.`);
         }
     });
-
 
     return NextResponse.json(suggestions);
 
