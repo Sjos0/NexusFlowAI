@@ -70,7 +70,6 @@ export default function Home() {
       const { id, subOptions: existingSubOptions } = addSubOptionModal.tool;
       const category = addSubOptionModal.category;
       
-      // Combine existing options with new ones, preventing duplicates
       const combinedOptions = [...existingSubOptions];
       newSubOptions.forEach(newOpt => {
         if (!combinedOptions.includes(newOpt)) {
@@ -83,14 +82,13 @@ export default function Home() {
     setAddSubOptionModal({ isOpen: false, tool: null, category: null });
   };
   
-  // Initial check for hydration
-  const [isHydrated, setIsHydrated] = useState(useToolsStore.getState().triggers.length > 0 || useToolsStore.getState().actions.length > 0 || useToolsStore.getState().constraints.length > 0);
+  const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
     const unsubscribe = useToolsStore.subscribe(
-      (state) => setIsHydrated(state.triggers.length > 0 || state.actions.length > 0 || state.constraints.length > 0 || !!Object.keys(state).find(key => (state[key as keyof typeof state] as any[]).length > 0)) // a bit more robust check
+      (state) => setIsHydrated(state.triggers.length > 0 || state.actions.length > 0 || state.constraints.length > 0 || Object.values(state).some(arr => Array.isArray(arr) && arr.length > 0))
     );
-    // If initial load from localStorage populated the store, reflect that
+    // Initial check after hydration attempt
     if (useToolsStore.getState().triggers.length > 0 || useToolsStore.getState().actions.length > 0 || useToolsStore.getState().constraints.length > 0) {
         setIsHydrated(true);
     }
@@ -114,44 +112,55 @@ export default function Home() {
                 NexusFlow
               </span>
             </h1>
-            <p className="text-muted-foreground">Seu planejador de automação para MacroDroid</p>
+            <p className="text-muted-foreground">Seu co-piloto de automação para MacroDroid</p>
           </div>
         </header>
         
-        <div className="flex-grow grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="flex-grow grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           {allColumns.map(({ title, icon, category, data }) => (
             <ToolColumn key={category} title={title} icon={icon} onAdd={() => handleOpenAddToolModal(category)}>
               <AnimatePresence>
-                {data.length === 0 && (
+                {!isHydrated && data.length === 0 ? (
+                  <motion.p 
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                    className="text-sm text-muted-foreground text-center py-4"
+                  >
+                    Carregando...
+                  </motion.p>
+                ) : data.length === 0 ? (
                   <motion.p 
                     initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                     className="text-sm text-muted-foreground text-center py-4"
                   >
                     Sem {title.toLowerCase()} definidos.
                   </motion.p>
+                ) : (
+                  data.map(tool => (
+                    <motion.div 
+                      key={tool.id} 
+                      layout 
+                      initial={{ opacity: 0, y: 20 }} 
+                      animate={{ opacity: 1, y: 0 }} 
+                      exit={{ opacity: 0, x: -20, transition: { duration: 0.2 } }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <ToolCard
+                        name={tool.name}
+                        subOptions={tool.subOptions}
+                        onDelete={() => handleOpenConfirmDelete(category, tool)}
+                        onAddSubOption={() => handleOpenAddSubOption(category, tool)}
+                      />
+                    </motion.div>
+                  ))
                 )}
-                {data.map(tool => (
-                  <motion.div 
-                    key={tool.id} 
-                    layout 
-                    initial={{ opacity: 0, y: 20 }} 
-                    animate={{ opacity: 1, y: 0 }} 
-                    exit={{ opacity: 0, x: -20, transition: { duration: 0.2 } }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <ToolCard
-                      name={tool.name}
-                      subOptions={tool.subOptions}
-                      onDelete={() => handleOpenConfirmDelete(category, tool)}
-                      onAddSubOption={() => handleOpenAddSubOption(category, tool)}
-                    />
-                  </motion.div>
-                ))}
               </AnimatePresence>
             </ToolColumn>
           ))}
         </div>
-        <footer className="mt-6"><AIPromptArea /></footer>
+        
+        <div className="flex justify-center flex-grow"> {/* Added flex-grow here */}
+            <AIPromptArea />
+        </div>
       </main>
 
       <AnimatePresence>

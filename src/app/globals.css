@@ -60,3 +60,11 @@
     @apply bg-background text-foreground;
   }
 }
+
+.prose pre {
+  background-color: hsl(222 70% 5%); /* Closer to Slate 950 for contrast */
+  border: 1px solid hsl(var(--border)); 
+  overflow-x: auto;
+  padding: 1rem;
+  border-radius: 0.5rem; /* Matches --radius */
+}
