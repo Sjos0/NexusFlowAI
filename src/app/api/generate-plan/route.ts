@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
     `;
 
     const llmResponse = await ai.generate({
-      model: 'googleai/gemini-1.5-flash-latest', 
+      model: 'googleai/gemini-2.5-flash-preview-05-20', 
       prompt: masterPrompt,
       config: { temperature: 0.5 },
     });
