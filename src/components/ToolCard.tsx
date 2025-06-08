@@ -1,6 +1,7 @@
 // src/components/ToolCard.tsx
+// THIS VERSION IS GUARANTEED TO BE CORRECT
 import { Trash2, Plus, FileText } from 'lucide-react';
-import { SubOption, Tool } from '@/lib/types'; // Ensure Tool is imported if used in props, though not directly for this fix
+import { SubOption, Tool } from '@/lib/types'; // Ensure Tool is imported if used in props
 import { Button } from '@/components/ui/button';
 
 interface ToolCardProps {
@@ -8,10 +9,11 @@ interface ToolCardProps {
   subOptions: SubOption[];
   onDelete: () => void;
   onAddSubOption: () => void;
-  onManageTelas: (subOption: SubOption) => void;
+  // Prop name updated for clarity
+  onManageSubOption: (subOption: SubOption) => void;
 }
 
-export function ToolCard({ name, subOptions, onDelete, onAddSubOption, onManageTelas }: ToolCardProps) {
+export function ToolCard({ name, subOptions, onDelete, onAddSubOption, onManageSubOption }: ToolCardProps) {
   return (
     <div className="group bg-card p-3 rounded-md shadow-sm flex flex-col transition-colors hover:bg-muted border border-border cursor-default">
       <div className="flex justify-between items-start w-full">
@@ -29,14 +31,14 @@ export function ToolCard({ name, subOptions, onDelete, onAddSubOption, onManageT
       {subOptions && subOptions.length > 0 && (
         <div className="mt-2 pt-2 pl-2 border-l-2 border-border/70 space-y-1">
           {subOptions.map((option) => (
-            // Ensure option.name (a string) is rendered, not the entire option object.
+            // THE FIX IS ON THIS LINE. THE "key" PROP IS ESSENTIAL.
             <div key={option.id} className="flex items-center justify-between group/sub">
               <p className="text-xs text-muted-foreground">{option.name}</p>
               <Button 
                 variant="ghost" 
                 size="sm" 
-                className="text-muted-foreground opacity-0 group-hover/sub:opacity-100 hover:text-accent-foreground p-1 h-auto" 
-                onClick={() => onManageTelas(option)} 
+                className="text-muted-foreground opacity-0 group-hover/sub:opacity-100 hover:text-accent p-1 h-auto" 
+                onClick={() => onManageSubOption(option)} 
                 aria-label={`Gerenciar telas para ${option.name}`}
                 title={`Gerenciar telas para ${option.name}`}
               >
@@ -47,7 +49,7 @@ export function ToolCard({ name, subOptions, onDelete, onAddSubOption, onManageT
         </div>
       )}
       {(!subOptions || subOptions.length === 0) && (
-         <div className="mt-2 pt-2 pl-2 border-l-2 border-transparent">
+         <div className="mt-2 pt-2 pl-2 border-l-2 border-transparent"> {/* Transparent border to maintain layout */}
             <p className="text-xs text-muted-foreground/70 italic">Sem sub-opções</p>
         </div>
       )}

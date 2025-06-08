@@ -4,85 +4,113 @@
 import { useState, useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
 // Component Imports
-import { AddToolModal } from '@/components/AddToolModal';
-import { ConfirmationModal } from '@/components/ConfirmationModal';
-import { AddSubOptionModal } from '@/components/AddSubOptionModal';
-import { AIPromptArea } from '@/components/AIPromptArea';
-import { KnowledgeBasePanel } from '@/components/KnowledgeBasePanel'; // Import new panel
+import { 
+  AddToolModal, 
+  ConfirmationModal, 
+  AddSubOptionModal, 
+  KnowledgeBasePanel, 
+  AIPromptArea, 
+  ManageTelasModal 
+} from '@/components';
 // Util & Hook Imports
 import { useToolsStore } from '@/stores/useToolsStore';
-import type { ToolCategory, Tool } from '@/lib/types'; // Ensure Tool is imported
-import { BotMessageSquare } from 'lucide-react'; // New Icon
-import { Button } from "@/components/ui/button"; // For consistent button styling
+import type { ToolCategory, Tool, SubOption, Tela } from '@/lib/types'; // Ensure Tela is imported
+import { BotMessageSquare } from 'lucide-react';
+import { Button } from "@/components/ui/button";
 
 export default function Home() {
+  // Note: toolsState will give access to triggers, actions, constraints directly if needed.
   const { hydrate, updateTool, removeTool, addTool } = useToolsStore();
 
-  // On initial mount, call hydrate() to load data from localStorage.
-  useEffect(() => {
-    hydrate();
+  useEffect(() => { 
+    hydrate(); 
   }, [hydrate]);
 
   // State for Modals
-  const [addToolModalOpen, setAddToolModalOpen] = useState(false);
-  const [currentCategoryForAdd, setCurrentCategoryForAdd] = useState<ToolCategory | null>(null);
-
-  const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; tool: Tool | null; category: ToolCategory | null }>({ isOpen: false, tool: null, category: null });
-  const [addSubOptionModal, setAddSubOptionModal] = useState<{ isOpen: boolean; tool: Tool | null; category: ToolCategory | null }>({ isOpen: false, tool: null, category: null });
-  const [isKbOpen, setIsKbOpen] = useState(false); // State for Knowledge Base Panel
+  const [addToolModalState, setAddToolModalState] = useState({ isOpen: false, category: null as ToolCategory | null, categoryTitle: '' });
+  const [confirmModalState, setConfirmModalState] = useState<{ isOpen: boolean; toolId: string | null; category: ToolCategory | null; toolName: string | null }>({ isOpen: false, toolId: null, category: null, toolName: null });
+  const [addSubOptionModalState, setAddSubOptionModalState] = useState<{ isOpen: boolean; tool: (Tool & { category: ToolCategory }) | null }>({ isOpen: false, tool: null });
+  
+  const [manageTelasModalState, setManageTelasModalState] = useState<{
+    isOpen: boolean;
+    toolId: string | null;
+    category: ToolCategory | null;
+    subOption: SubOption | null;
+  }>({ isOpen: false, toolId: null, category: null, subOption: null });
+  
+  const [isKbOpen, setIsKbOpen] = useState(false);
 
   const categoryTitles: Record<ToolCategory, string> = {
     triggers: 'Gatilhos',
     actions: 'Ações',
     constraints: 'Restrições'
   };
-  
-  // === Handlers for Modals (to be passed to KnowledgeBasePanel) ===
-   const handleOpenAddToolModal = (category: ToolCategory) => {
-    setCurrentCategoryForAdd(category);
-    setAddToolModalOpen(true);
+
+  // === Handlers for Modals ===
+  const handleOpenAddToolModal = (category: ToolCategory) => {
+    setAddToolModalState({ isOpen: true, category, categoryTitle: categoryTitles[category] });
   };
 
-  const handleAddToolSubmit = (name: string, subOptions: string[]) => {
-    if (currentCategoryForAdd) {
-      addTool(currentCategoryForAdd, { id: crypto.randomUUID(), name, subOptions });
+  const handleAddToolSubmit = (name: string, subOptionNames: string[]) => {
+    if (addToolModalState.category) {
+      const newSubOptions: SubOption[] = subOptionNames.map(soName => ({ id: crypto.randomUUID(), name: soName, telas: [] }));
+      addTool(addToolModalState.category, { id: crypto.randomUUID(), name, subOptions: newSubOptions });
     }
-    setAddToolModalOpen(false);
-    setCurrentCategoryForAdd(null);
+    setAddToolModalState({ isOpen: false, category: null, categoryTitle: '' });
   };
   
   const handleOpenConfirmDelete = (category: ToolCategory, tool: Tool) => {
-    setConfirmModal({ isOpen: true, tool, category });
+    setConfirmModalState({ isOpen: true, toolId: tool.id, category, toolName: tool.name });
   };
-
+  
   const handleConfirmDelete = () => {
-    if (confirmModal.tool && confirmModal.category) {
-      removeTool(confirmModal.category, confirmModal.tool.id);
+    if (confirmModalState.toolId && confirmModalState.category) {
+      removeTool(confirmModalState.category, confirmModalState.toolId);
     }
-    setConfirmModal({ isOpen: false, tool: null, category: null });
+    setConfirmModalState({ isOpen: false, toolId: null, category: null, toolName: null });
   };
 
   const handleOpenAddSubOption = (category: ToolCategory, tool: Tool) => {
-    setAddSubOptionModal({ isOpen: true, tool, category });
+    setAddSubOptionModalState({ isOpen: true, tool: { ...tool, category } });
   };
 
-  const handleAddSubOptionSubmit = (newSubOptions: string[]) => {
-    if (addSubOptionModal.tool && addSubOptionModal.category) {
-      const { id, subOptions: existingSubOptions } = addSubOptionModal.tool;
-      const category = addSubOptionModal.category;
-      
-      const combinedOptions = [...existingSubOptions];
-      newSubOptions.forEach(newOpt => {
-        if (!combinedOptions.includes(newOpt)) {
-          combinedOptions.push(newOpt);
-        }
-      });
-      
-      updateTool(category, id, { subOptions: combinedOptions });
+  const handleAddSubOptionSubmit = (newSubOptionNames: string[]) => {
+    const { tool } = addSubOptionModalState;
+    if (tool) {
+      const newSubOptionsFromNames: SubOption[] = newSubOptionNames.map(name => ({ id: crypto.randomUUID(), name, telas: [] }));
+      // Ensure all existing subOptions are SubOption objects
+      const existingSubOptionsObjects: SubOption[] = tool.subOptions.map(so => 
+        typeof so === 'string' ? { id: crypto.randomUUID(), name: so, telas: [] } : so
+      );
+      const allSubOptions = [...existingSubOptionsObjects, ...newSubOptionsFromNames];
+      updateTool(tool.category, tool.id, { subOptions: allSubOptions });
     }
-    setAddSubOptionModal({ isOpen: false, tool: null, category: null });
+    setAddSubOptionModalState({ isOpen: false, tool: null });
   };
 
+  // Handler to open the ManageTelasModal
+  const handleOpenManageTelas = (toolId: string, category: ToolCategory, subOption: SubOption) => {
+    setManageTelasModalState({ isOpen: true, toolId, category, subOption });
+  };
+
+  // Handler to save the updated telas from ManageTelasModal
+  const handleSaveTelas = (updatedSubOption: SubOption) => {
+    const { toolId, category } = manageTelasModalState;
+    if (!toolId || !category) return;
+
+    // Directly use the Zustand hook to get the current state for the specific category
+    const toolsForCategory = useToolsStore.getState()[category];
+    const toolToUpdate = toolsForCategory.find(t => t.id === toolId);
+
+    if (!toolToUpdate) return;
+
+    const newSubOptionsForTool = toolToUpdate.subOptions.map(so => 
+      so.id === updatedSubOption.id ? updatedSubOption : so
+    );
+
+    updateTool(category, toolId, { subOptions: newSubOptionsForTool });
+    // No need to setManageTelasModalState here as onClose in the modal will handle closing
+  };
 
   return (
     <>
@@ -106,8 +134,6 @@ export default function Home() {
           </Button>
         </header>
         
-        {/* The main content area is now dedicated to the chat interface */}
-        {/* Added flex-grow to AIPromptArea container for it to take available space */}
         <div className="flex-grow flex justify-center items-stretch"> 
           <AIPromptArea />
         </div>
@@ -119,29 +145,37 @@ export default function Home() {
         onOpenAddTool={handleOpenAddToolModal}
         onOpenConfirmDelete={handleOpenConfirmDelete}
         onOpenAddSubOption={handleOpenAddSubOption}
+        onOpenManageTelas={(category, tool, subOption) => handleOpenManageTelas(tool.id, category, subOption)}
       />
 
       <AnimatePresence>
-        {addToolModalOpen && currentCategoryForAdd && (
+        {addToolModalState.isOpen && addToolModalState.category && (
           <AddToolModal
-            onClose={() => { setAddToolModalOpen(false); setCurrentCategoryForAdd(null);}}
+            onClose={() => setAddToolModalState({ isOpen: false, category: null, categoryTitle: '' })}
             onAdd={handleAddToolSubmit}
-            categoryTitle={categoryTitles[currentCategoryForAdd]}
+            categoryTitle={addToolModalState.categoryTitle}
           />
         )}
-        {confirmModal.isOpen && (
+        {confirmModalState.isOpen && (
           <ConfirmationModal
-            onCancel={() => setConfirmModal({ isOpen: false, tool: null, category: null })}
+            onCancel={() => setConfirmModalState({ isOpen: false, toolId: null, category: null, toolName: null })}
             onConfirm={handleConfirmDelete}
-            message={`Tem certeza que deseja deletar a ferramenta "${confirmModal.tool?.name || 'esta ferramenta'}"? Esta ação não pode ser desfeita.`}
+            message={`Tem certeza que deseja deletar a ferramenta "${confirmModalState.toolName || 'esta ferramenta'}"? Esta ação não pode ser desfeita.`}
             title="Confirmar Exclusão"
           />
         )}
-        {addSubOptionModal.isOpen && addSubOptionModal.tool && addSubOptionModal.category && (
+        {addSubOptionModalState.isOpen && addSubOptionModalState.tool && (
           <AddSubOptionModal
-            onClose={() => setAddSubOptionModal({ isOpen: false, tool: null, category: null })}
+            onClose={() => setAddSubOptionModalState({ isOpen: false, tool: null })}
             onAdd={handleAddSubOptionSubmit}
-            toolName={addSubOptionModal.tool.name}
+            toolName={addSubOptionModalState.tool.name}
+          />
+        )}
+        {manageTelasModalState.isOpen && manageTelasModalState.subOption && (
+          <ManageTelasModal
+            onClose={() => setManageTelasModalState({ isOpen: false, toolId: null, category: null, subOption: null })}
+            subOption={manageTelasModalState.subOption}
+            onSave={handleSaveTelas}
           />
         )}
       </AnimatePresence>

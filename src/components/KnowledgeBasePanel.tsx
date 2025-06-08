@@ -6,15 +6,16 @@ import { ToolColumn } from './ToolColumn';
 import { ToolCard } from './ToolCard';
 import { X, Zap, Target, ShieldCheck } from 'lucide-react';
 import { useToolsStore } from '@/stores/useToolsStore';
-import type { ToolCategory, Tool } from '@/lib/types';
-import { ScrollArea } from '@/components/ui/scroll-area'; // For better scrolling within panel
+import type { ToolCategory, Tool, SubOption } from '@/lib/types'; // Import SubOption
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface KnowledgeBasePanelProps {
   isOpen: boolean;
   onClose: () => void;
   onOpenAddTool: (category: ToolCategory) => void;
-  onOpenConfirmDelete: (category: ToolCategory, tool: Tool) => void; // Pass full tool for name in confirm modal
+  onOpenConfirmDelete: (category: ToolCategory, tool: Tool) => void;
   onOpenAddSubOption: (category: ToolCategory, tool: Tool) => void;
+  onOpenManageTelas: (category: ToolCategory, tool: Tool, subOption: SubOption) => void; // Updated prop
 }
 
 export function KnowledgeBasePanel({ 
@@ -22,14 +23,14 @@ export function KnowledgeBasePanel({
   onClose, 
   onOpenAddTool, 
   onOpenConfirmDelete, 
-  onOpenAddSubOption 
+  onOpenAddSubOption,
+  onOpenManageTelas // New prop
 }: KnowledgeBasePanelProps) {
-  // Get reactive state from the store
   const triggers = useToolsStore(state => state.triggers);
   const actions = useToolsStore(state => state.actions);
   const constraints = useToolsStore(state => state.constraints);
 
-  const allColumns = [
+  const allColumnsData = [
     { title: "Gatilhos", icon: Zap, category: "triggers" as ToolCategory, data: triggers },
     { title: "Ações", icon: Target, category: "actions" as ToolCategory, data: actions },
     { title: "Restrições", icon: ShieldCheck, category: "constraints" as ToolCategory, data: constraints },
@@ -45,7 +46,7 @@ export function KnowledgeBasePanel({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/80 z-40" // Increased opacity for better focus
+            className="fixed inset-0 bg-black/80 z-40"
           />
           <motion.div
             initial={{ x: '100%' }}
@@ -69,7 +70,7 @@ export function KnowledgeBasePanel({
             </p>
             <ScrollArea className="flex-grow">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6">
-                {allColumns.map(({ title, icon, category, data }) => (
+                {allColumnsData.map(({ title, icon, category, data }) => (
                   <ToolColumn key={category} title={title} icon={icon} onAdd={() => onOpenAddTool(category)}>
                     {data.length === 0 && (
                        <motion.p 
@@ -94,6 +95,8 @@ export function KnowledgeBasePanel({
                             subOptions={tool.subOptions}
                             onDelete={() => onOpenConfirmDelete(category, tool)}
                             onAddSubOption={() => onOpenAddSubOption(category, tool)}
+                            // Updated to pass correct arguments
+                            onManageSubOption={(subOption) => onOpenManageTelas(category, tool, subOption)}
                           />
                         </motion.div>
                       ))}
