@@ -3,7 +3,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
-import { CornerDownLeft, Terminal } from 'lucide-react'; // Added Terminal back for consistency if needed
+import { CornerDownLeft } from 'lucide-react'; 
 import { useToolsStore } from '@/stores/useToolsStore';
 import type { GeneratedPlan, ChatMessage, Tool, ToolCategory } from '@/lib/types';
 import { AutomationPlanView } from './AutomationPlanView';
@@ -21,12 +21,11 @@ export function AIPromptArea() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const hasMounted = useHasMounted();
 
-  // Select specific parts of the store to prevent unnecessary re-renders
   const currentTools = useToolsStore(state => ({
     triggers: state.triggers,
     actions: state.actions,
     constraints: state.constraints,
-    variables: state.variables, // Include variables if they should be passed to the AI
+    variables: state.variables,
   }));
   
 
@@ -63,16 +62,30 @@ export function AIPromptArea() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           messages: updatedMessages, 
-          tools: currentTools // Pass all tools including variables
+          tools: currentTools 
         }),
       });
       
-      const responseData = await res.json();
-
-      if (!res.ok) {
-        throw new Error(responseData.error || `API Error: ${res.status} ${res.statusText}`);
+      let responseData;
+      try {
+        // Attempt to parse JSON, this might throw if body is not valid JSON (e.g. HTML error page)
+        responseData = await res.json();
+      } catch (jsonParseError) {
+        // If parsing failed and res.ok is false, it's likely a server error page (HTML/text)
+        if (!res.ok) {
+          throw new Error(`API Error: ${res.status} ${res.statusText}. Failed to parse error response body.`);
+        }
+        // If res.ok is true but parsing failed, this is an unexpected successful response format
+        throw new Error(`API Error: Received OK status (${res.status}) but failed to parse response body. This is unexpected.`);
       }
 
+      if (!res.ok) {
+        // If res.ok is false, responseData should (ideally) contain an error message from the API
+        const errorMessage = responseData?.error || `API Error: ${res.status} ${res.statusText}. No specific error message provided by the API.`;
+        throw new Error(errorMessage);
+      }
+
+      // If res.ok is true, responseData is the successfully generated plan
       const newAiMessage: ChatMessage = {
         id: crypto.randomUUID(),
         role: 'model',
@@ -89,7 +102,7 @@ export function AIPromptArea() {
         content: { 
           macroName: "Erro de Comunicação", 
           steps: [{ 
-            type: "AÇÃO", // Keep consistent type
+            type: "AÇÃO", 
             toolName: "Diagnóstico de Erro", 
             chosenSubOptions: [], 
             detailedSteps: `**Falha ao processar seu pedido:**\n\n- ${errorMessage}` 
@@ -131,7 +144,7 @@ export function AIPromptArea() {
               className={cn("flex", msg.role === 'user' ? 'justify-end' : 'justify-start')}
             >
               <div className={cn(
-                "max-w-[85%] sm:max-w-[75%] p-0", // p-0 because AutomationPlanView and user message div handle their own padding
+                "max-w-[85%] sm:max-w-[75%] p-0", 
                  msg.role === 'user' ? "self-end" : "self-start"
               )}>
                 {msg.role === 'user' ? (
@@ -164,9 +177,8 @@ export function AIPromptArea() {
 
       {/* Input Area */}
       <div className="flex-shrink-0 pt-4 border-t border-border">
-        {/* SuggestionTicker used to be here */}
         <form onSubmit={handleSubmit}>
-          <div className="bg-card rounded-lg p-2 shadow-xl flex items-end border border-border mt-2"> {/* Added mt-2 as SuggestionTicker is gone */}
+          <div className="bg-card rounded-lg p-2 shadow-xl flex items-end border border-border mt-2"> 
             <TextareaAutosize
               ref={inputRef}
               value={input}
@@ -184,7 +196,7 @@ export function AIPromptArea() {
               disabled={isGeneratingPlan || !input.trim()}
               className={cn(
                 "flex items-center justify-center h-10 w-10 rounded-md hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed ml-2 flex-shrink-0",
-                "bg-gradient-to-r from-accent to-accent-end text-accent-foreground" // Restored original button style
+                "bg-gradient-to-r from-accent to-accent-end text-accent-foreground"
               )}
               aria-label="Enviar"
             >
