@@ -1,8 +1,7 @@
 // src/app/api/generate-plan/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { generate } from 'genkit/ai';
-import { googleAI } from '@genkit-ai/googleai'; // Corrected import
-import type { Message } from 'genkit/ai'; // Correct type for Genkit messages
+import { ai } from '@/ai/genkit'; // Changed import
+import type { Message } from 'genkit/ai'; 
 import type { Tool, ChatMessage, GeneratedPlan } from '@/lib/types';
 // The user explicitly asked for this import.
 // It typically loads genkit.config.ts if it has side effects like configureGenkit()
@@ -62,11 +61,11 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Nenhum prompt de usuário atual encontrado para processar." }, { status: 400 });
     }
     
-    const llmResponse = await generate({
-      model: googleAI('gemini-2.5-flash-preview-05-20'), // Using corrected googleAI
-      system: `${masterPrompt}\n\nFerramentas disponíveis para este turno: ${availableTools}`, // Add available tools to system prompt
-      history: history, // Pass the modified history (without the last user message)
-      prompt: currentPromptText, // The last user message
+    const llmResponse = await ai.generate({ // Changed to ai.generate
+      model: 'googleai/gemini-2.5-flash-preview-05-20', // Corrected model specification
+      system: `${masterPrompt}\n\nFerramentas disponíveis para este turno: ${availableTools}`, 
+      history: history, 
+      prompt: currentPromptText, 
       config: { temperature: 0.6 },
     });
     
