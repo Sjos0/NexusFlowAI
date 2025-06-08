@@ -1,7 +1,6 @@
 // src/app/api/generate-plan/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { generate } from 'genkit/ai'; // Direct import for generate
-import { googleAI } from '@genkit-ai/googleai'; // Corrected import for googleAI model provider
+import { ai } from '@/ai/genkit'; // Use the project's configured ai instance
 import type { Tool, Variable, PlanStep, GeneratedPlan } from '@/lib/types'; // Ensure all necessary types are here
 import { WIKI_CONTEXT } from '@/lib/ai/wikiContext';
 
@@ -67,13 +66,13 @@ ${userKnowledgeBase}
 Gere o objeto JSON agora.
 `;
     
-    const llmResponse = await generate({
-      model: googleAI('gemini-2.5-flash-preview-05-20'), // Using direct googleAI provider
+    const llmResponse = await ai.generate({ // Use the ai instance
+      model: 'googleai/gemini-2.5-flash-preview-05-20', // Specify model as a string
       prompt: finalPrompt,
       config: { temperature: 0.4 },
     });
 
-    const responseTextRaw = llmResponse.text(); // Genkit 1.x syntax
+    const responseTextRaw = llmResponse.text; // Genkit 1.x syntax
     if (!responseTextRaw) {
         throw new Error('LLM returned an empty response.');
     }
