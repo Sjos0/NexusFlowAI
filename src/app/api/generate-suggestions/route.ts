@@ -3,7 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ai } from '@/ai/genkit';
 import type { Tool } from '@/lib/types';
-import '../../../../genkit.config';
+// Removed: import '../../../../genkit.config';
 
 const formatToolsForSuggestion = (tools: Tool[]): string => {
   if (!tools || tools.length === 0) return 'Nenhum';
@@ -51,19 +51,15 @@ export async function POST(req: NextRequest) {
     });
     
     const mainCandidate = llmResponse.candidates[0];
-    if (!mainCandidate || mainCandidate.finishReason !== 'STOP') {
+    if (!mainCandidate || mainCandidate.finishReason !== 'STOP' || !mainCandidate.output?.text) {
       const reason = mainCandidate?.finishReason || 'UNKNOWN_REASON';
-      const message = mainCandidate?.message || 'Nenhuma mensagem disponível do LLM.';
-      console.error(`Falha na geração do LLM para sugestões. Razão: ${reason}. Mensagem: ${message}`, llmResponse);
-      throw new Error(`Falha na geração de sugestões da IA: ${reason}. ${message}`);
+      const messageText = mainCandidate?.output?.text || 'Nenhuma mensagem de saída do LLM.';
+      console.error(`Falha na geração do LLM para sugestões. Razão: ${reason}. Saída: ${messageText}`, llmResponse);
+      throw new Error(`Falha na geração de sugestões da IA: ${reason}. ${messageText}`);
     }
 
-    const responseTextRaw = mainCandidate.output?.text;
-    if (typeof responseTextRaw !== 'string') {
-      console.error('Resposta do LLM para sugestões não continha uma saída de texto válida.', mainCandidate.output);
-      throw new Error('A resposta da IA para sugestões não continha texto utilizável.');
-    }
-    
+    const responseTextRaw = mainCandidate.output.text;
+        
     let responseText = responseTextRaw.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
     
     let suggestions;
@@ -88,7 +84,7 @@ export async function POST(req: NextRequest) {
         console.error("Sugestões da IA não são um array:", suggestions);
         throw new Error("A IA não retornou um array de sugestões válido.");
     }
-    suggestions.forEach((sug: any, index: number) => { // Added 'any' type for sug temporarily
+    suggestions.forEach((sug: any, index: number) => {
         if (typeof sug.title !== 'string' || typeof sug.prompt !== 'string') {
             console.error(`Sugestão ${index} inválida:`, sug);
             throw new Error(`A IA retornou uma sugestão (${index}) malformada.`);
@@ -103,6 +99,6 @@ export async function POST(req: NextRequest) {
     if (error instanceof Error) {
         errorMessage = error.message;
     }
-    return NextResponse.json({ error: errorMessage, details: error instanceof Error ? String(error) : null }, { status: 500 });
+    return NextResponse.json({ error: errorMessage, details: error instanceof Error ? String(error) : "Detalhes não disponíveis" }, { status: 500 });
   }
 }

@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ai } from '@/ai/genkit';
 import type { Message } from 'genkit/ai';
 import type { Tool, ChatMessage, GeneratedPlan } from '@/lib/types';
-import '../../../../genkit.config'; 
+// Removed: import '../../../../genkit.config'; 
 
 const formatTools = (tools: Tool[]): string => {
   if (!tools || tools.length === 0) return 'Nenhum';
@@ -55,18 +55,14 @@ export async function POST(req: NextRequest) {
     });
     
     const mainCandidate = llmResponse.candidates[0];
-    if (!mainCandidate || mainCandidate.finishReason !== 'STOP') {
+    if (!mainCandidate || mainCandidate.finishReason !== 'STOP' || !mainCandidate.output?.text) {
       const reason = mainCandidate?.finishReason || 'UNKNOWN_REASON';
-      const message = mainCandidate?.message || 'Nenhuma mensagem disponível do LLM.';
-      console.error(`Falha na geração do LLM. Razão: ${reason}. Mensagem: ${message}`, llmResponse);
-      throw new Error(`Falha na geração da IA: ${reason}. ${message}`);
+      const messageText = mainCandidate?.output?.text || 'Nenhuma mensagem de saída do LLM.';
+      console.error(`Falha na geração do LLM. Razão: ${reason}. Saída: ${messageText}`, llmResponse);
+      throw new Error(`Falha na geração da IA: ${reason}. ${messageText}`);
     }
 
-    const responseTextRaw = mainCandidate.output?.text;
-    if (typeof responseTextRaw !== 'string') {
-      console.error('Resposta do LLM não continha uma saída de texto válida.', mainCandidate.output);
-      throw new Error('A resposta da IA não continha texto utilizável.');
-    }
+    const responseTextRaw = mainCandidate.output.text;
     
     const responseText = responseTextRaw.replace(/```json/g, '').replace(/```/g, '').trim();
     let plan;
@@ -108,7 +104,7 @@ export async function POST(req: NextRequest) {
         errorMessage = error.message;
     }
     return NextResponse.json(
-      { error: errorMessage, details: error instanceof Error ? String(error) : null },
+      { error: errorMessage, details: error instanceof Error ? String(error) : "Detalhes não disponíveis" },
       { status: 500 }
     );
   }
