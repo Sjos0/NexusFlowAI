@@ -8,6 +8,6 @@ export * from './EditSubOptionModal';
 export * from './EditToolModal';
 export * from './KnowledgeBasePanel';
 export * from './ManageTelasModal';
-export * from './SuggestionTicker'; // Added SuggestionTicker
+// SuggestionTicker was here
 export * from './ToolCard';
 export * from './ToolColumn';

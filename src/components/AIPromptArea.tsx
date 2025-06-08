@@ -3,21 +3,19 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
-import { CornerDownLeft, Terminal } from 'lucide-react';
+import { CornerDownLeft, Terminal } from 'lucide-react'; // Added Terminal back for consistency if needed
 import { useToolsStore } from '@/stores/useToolsStore';
 import type { GeneratedPlan, ChatMessage, Tool, ToolCategory } from '@/lib/types';
 import { AutomationPlanView } from './AutomationPlanView';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { SuggestionTicker, Suggestion } from './SuggestionTicker'; // Import Suggestion type
 import { useHasMounted } from '@/hooks/useHasMounted';
+
 
 export function AIPromptArea() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
-  const [isGeneratingPlan, setIsGeneratingPlan] = useState(false); // Renamed for clarity
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
-  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+  const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
   
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -28,40 +26,9 @@ export function AIPromptArea() {
     triggers: state.triggers,
     actions: state.actions,
     constraints: state.constraints,
+    variables: state.variables, // Include variables if they should be passed to the AI
   }));
   
-  const fetchSuggestions = useCallback(async () => {
-    if (!hasMounted || (currentTools.triggers.length === 0 && currentTools.actions.length === 0)) {
-        setSuggestions([]); // Clear suggestions if no relevant tools
-        return;
-    }
-    
-    setIsLoadingSuggestions(true);
-    try {
-      const res = await fetch('/api/generate-suggestions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tools: currentTools }), // Pass currentTools
-      });
-      const data = await res.json();
-      if (res.ok && Array.isArray(data)) {
-        setSuggestions(data);
-      } else {
-        console.error("Failed to load suggestions, API returned an error or invalid data:", data);
-        setSuggestions([]);
-      }
-    } catch (error) {
-      console.error("Exception while fetching suggestions:", error);
-      setSuggestions([]);
-    } finally {
-      setIsLoadingSuggestions(false);
-    }
-  }, [currentTools, hasMounted]); // Add hasMounted to dependency array
-
-  useEffect(() => {
-    // Fetch suggestions when tools change (and component is mounted)
-    fetchSuggestions();
-  }, [fetchSuggestions]); // fetchSuggestions itself depends on currentTools and hasMounted
 
   useEffect(() => {
     if (chatContainerRef.current) {
@@ -74,11 +41,6 @@ export function AIPromptArea() {
         inputRef.current?.focus();
     }
   }, [hasMounted]);
-
-  const handleUseSuggestion = (prompt: string) => {
-    setInput(prompt);
-    inputRef.current?.focus();
-  };
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -101,11 +63,7 @@ export function AIPromptArea() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           messages: updatedMessages, 
-          tools: { // Pass all tools from the store
-            triggers: useToolsStore.getState().triggers,
-            actions: useToolsStore.getState().actions,
-            constraints: useToolsStore.getState().constraints,
-          }
+          tools: currentTools // Pass all tools including variables
         }),
       });
       
@@ -131,7 +89,7 @@ export function AIPromptArea() {
         content: { 
           macroName: "Erro de Comunicação", 
           steps: [{ 
-            type: "AÇÃO",
+            type: "AÇÃO", // Keep consistent type
             toolName: "Diagnóstico de Erro", 
             chosenSubOptions: [], 
             detailedSteps: `**Falha ao processar seu pedido:**\n\n- ${errorMessage}` 
@@ -173,7 +131,7 @@ export function AIPromptArea() {
               className={cn("flex", msg.role === 'user' ? 'justify-end' : 'justify-start')}
             >
               <div className={cn(
-                "max-w-[85%] sm:max-w-[75%] p-0",
+                "max-w-[85%] sm:max-w-[75%] p-0", // p-0 because AutomationPlanView and user message div handle their own padding
                  msg.role === 'user' ? "self-end" : "self-start"
               )}>
                 {msg.role === 'user' ? (
@@ -204,15 +162,11 @@ export function AIPromptArea() {
         )}
       </div>
 
-      {/* Suggestion & Input Area */}
+      {/* Input Area */}
       <div className="flex-shrink-0 pt-4 border-t border-border">
-        <SuggestionTicker 
-            suggestions={suggestions} 
-            onUseSuggestion={handleUseSuggestion}
-            isLoading={isLoadingSuggestions} 
-        />
+        {/* SuggestionTicker used to be here */}
         <form onSubmit={handleSubmit}>
-          <div className="bg-card rounded-lg p-2 shadow-xl flex items-end border border-border mt-2">
+          <div className="bg-card rounded-lg p-2 shadow-xl flex items-end border border-border mt-2"> {/* Added mt-2 as SuggestionTicker is gone */}
             <TextareaAutosize
               ref={inputRef}
               value={input}
@@ -230,7 +184,7 @@ export function AIPromptArea() {
               disabled={isGeneratingPlan || !input.trim()}
               className={cn(
                 "flex items-center justify-center h-10 w-10 rounded-md hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed ml-2 flex-shrink-0",
-                "bg-gradient-to-r from-accent to-accent-end text-accent-foreground"
+                "bg-gradient-to-r from-accent to-accent-end text-accent-foreground" // Restored original button style
               )}
               aria-label="Enviar"
             >

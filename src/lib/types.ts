@@ -1,5 +1,5 @@
 // src/lib/types.ts
-export type ToolCategory = 'triggers' | 'actions' | 'constraints';
+export type ToolCategory = 'triggers' | 'actions' | 'constraints' | 'variables';
 
 export interface Tela {
   id: string;
@@ -18,6 +18,12 @@ export interface Tool {
   subOptions: SubOption[];
 }
 
+export interface Variable {
+  id: string;
+  name: string;
+  description: string;
+}
+
 export interface PlanStep {
   type: 'GATILHO' | 'AÇÃO' | 'RESTRIÇÃO';
   toolName: string;
@@ -30,10 +36,8 @@ export interface GeneratedPlan {
   steps: PlanStep[];
 }
 
-// For chat history
 export interface ChatMessage {
   id: string;
   role: 'user' | 'model';
-  // User content is a string, model content is our GeneratedPlan object or an error string.
   content: string | GeneratedPlan;
 }
