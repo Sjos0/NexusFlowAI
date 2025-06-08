@@ -7,18 +7,16 @@ export interface Tool {
   subOptions: string[];
 }
 
-export interface ToolsState {
-  triggers: Tool[];
-  actions: Tool[];
-  constraints: Tool[];
-  addTool: (category: ToolCategory, tool: Tool) => void;
-  removeTool: (category: ToolCategory, toolId: string) => void;
+// NEW: Define the structure for a single step in the plan
+export interface PlanStep {
+  type: 'GATILHO' | 'AÇÃO' | 'RESTRIÇÃO';
+  toolName: string;
+  chosenSubOptions: string[];
+  detailedSteps: string[];
 }
 
+// NEW: The complete plan is a name and an array of these steps
 export interface GeneratedPlan {
   macroName: string;
-  explanation: string;
-  triggers: string[];
-  actions: string[];
-  constraints: string[];
+  steps: PlanStep[];
 }

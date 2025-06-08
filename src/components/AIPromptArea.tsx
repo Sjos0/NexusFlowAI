@@ -5,10 +5,13 @@ import { useState } from 'react';
 import { Sparkles } from 'lucide-react';
 import { useToolsStore } from '@/stores/useToolsStore';
 import type { GeneratedPlan } from '@/lib/types';
-import { MacroView } from './MacroView';
+import { AutomationPlanView } from './AutomationPlanView'; // Use the new component
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Terminal } from "lucide-react";
+
 
 export function AIPromptArea() {
   const [prompt, setPrompt] = useState('');
@@ -27,7 +30,7 @@ export function AIPromptArea() {
 
     setIsLoading(true);
     setError(null);
-    setPlan(null); 
+    setPlan(null);
 
     try {
       const apiResponse = await fetch('/api/generate-plan', {
@@ -39,13 +42,13 @@ export function AIPromptArea() {
       const data = await apiResponse.json();
 
       if (!apiResponse.ok) {
-        // Se a API retornar um erro JSON estruturado, use a mensagem dele.
+        // If data.error exists, prioritize that, otherwise use a generic message.
         const errorMessage = data.error || data.message || `Erro ${apiResponse.status}: ${apiResponse.statusText}.`;
         throw new Error(errorMessage);
       }
       
-      // Validação básica da estrutura do plano
-      if (!data.macroName || !data.explanation || !Array.isArray(data.triggers) || !Array.isArray(data.actions) || !Array.isArray(data.constraints)) {
+      // Additional validation for the expected structure
+      if (!data.macroName || !Array.isArray(data.steps)) {
         throw new Error('A IA retornou um plano com formato inesperado.');
       }
 
@@ -67,29 +70,41 @@ export function AIPromptArea() {
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             placeholder="Descreva a automação que você deseja criar..."
-            className="flex-grow pr-28"
+            className="flex-grow pr-32 sm:pr-36 text-base" // Increased padding for larger button
             disabled={isLoading}
             aria-label="Prompt de Automação"
           />
           <Button
             type="submit"
-            disabled={isLoading}
+            disabled={isLoading || !prompt.trim()}
             className={cn(
-              "absolute right-2 top-1/2 -translate-y-1/2 font-bold",
+              "absolute right-2 top-1/2 -translate-y-1/2 font-bold px-3 sm:px-4 py-1.5 h-auto text-sm", // Adjusted padding and height
               "bg-gradient-to-r from-accent to-accent-end text-accent-foreground hover:opacity-90 transition-opacity",
               "disabled:opacity-50 disabled:cursor-not-allowed"
             )}
-            size="sm"
           >
-            <Sparkles className="h-4 w-4 mr-2" />
-            Gerar
+            <Sparkles className="h-4 w-4 mr-1.5 sm:mr-2" />
+            Gerar Plano
           </Button>
         </div>
       </form>
 
-      {isLoading && <p className="text-center text-muted-foreground animate-pulse py-4">Gerando plano...</p>}
-      {error && <p className="text-center text-destructive py-4">{error}</p>}
-      {plan && <MacroView plan={plan} />}
+      {isLoading && (
+        <div className="text-center text-muted-foreground animate-pulse py-4 flex items-center justify-center">
+          <Sparkles className="h-5 w-5 mr-2 animate-spin" />
+          Gerando plano detalhado...
+        </div>
+      )}
+      {error && (
+        <Alert variant="destructive" className="my-4">
+          <Terminal className="h-4 w-4" />
+          <AlertTitle>Erro ao Gerar Plano</AlertTitle>
+          <AlertDescription>
+            {error}
+          </AlertDescription>
+        </Alert>
+      )}
+      {plan && <AutomationPlanView plan={plan} />}
     </div>
   );
 }

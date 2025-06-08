@@ -3,16 +3,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ai } from '@/ai/genkit'; // Using the pre-configured ai object
 import type { Tool } from '@/lib/types';
 
-// Helper function to format tools for the prompt
 const formatToolsForPrompt = (tools: Tool[]): string => {
   if (!tools || tools.length === 0) return 'Nenhum';
-  return tools.map(t => {
-    let toolString = t.name;
-    if (t.subOptions && t.subOptions.length > 0) {
-      toolString += ` (Opções: ${t.subOptions.join(', ')})`;
-    }
-    return toolString;
-  }).join('; ');
+  return tools.map(t => `${t.name}${t.subOptions.length > 0 ? ` (Opções: ${t.subOptions.join(', ')})` : ''}`).join('; ');
 };
 
 export async function POST(req: NextRequest) {
@@ -24,25 +17,50 @@ export async function POST(req: NextRequest) {
     const availableConstraints = formatToolsForPrompt(tools.constraints);
 
     const masterPrompt = `
-      Você é um especialista em MacroDroid. Seu objetivo é analisar o pedido de um usuário e as ferramentas (com suas respectivas sub-opções, se houver) que ele tem e criar um plano de automação.
+      Você é um assistente especialista em MacroDroid. Sua tarefa é criar um plano de automação detalhado a partir do pedido de um usuário e de uma lista de ferramentas disponíveis.
 
-      **Sua resposta DEVE ser um objeto JSON VÁLIDO e NADA MAIS.**
-      O JSON deve ter a seguinte estrutura:
+      **Sua resposta DEVE ser um objeto JSON VÁLIDO e NADA MAIS, seguindo estritamente a estrutura abaixo:**
       {
-        "macroName": "Um nome curto e descritivo para a macro",
-        "explanation": "Uma explicação em texto simples e didático de como a automação funciona.",
-        "triggers": ["Nome Exato do Gatilho (Sub-Opção Selecionada se aplicável e importante)"],
-        "actions": ["Nome Exato da Ação (Sub-Opção Selecionada)", "Outra Ação Nome (Sub-Opção Selecionada)"],
-        "constraints": ["Nome Exato da Restrição (Sub-Opção Selecionada se aplicável)"]
+        "macroName": "Um nome curto e descritivo para a automação.",
+        "steps": [
+          {
+            "type": "GATILHO",
+            "toolName": "Nome exato da ferramenta usada da lista de Gatilhos Disponíveis",
+            "chosenSubOptions": ["Opção 1 escolhida para o gatilho", "Opção 2 se houver"],
+            "detailedSteps": [
+              "Primeiro passo detalhado e didático de como configurar esta ferramenta de gatilho no MacroDroid.",
+              "Segundo passo, explicando alguma configuração específica do gatilho.",
+              "Terceiro passo, se necessário para o gatilho."
+            ]
+          },
+          {
+            "type": "AÇÃO",
+            "toolName": "Nome exato da ferramenta usada da lista de Ações Disponíveis",
+            "chosenSubOptions": ["Opção 1 escolhida para a ação"],
+            "detailedSteps": [
+              "Primeiro passo detalhado e didático de como configurar esta ferramenta de ação no MacroDroid.",
+              "Segundo passo, explicando alguma configuração específica da ação."
+            ]
+          },
+          {
+            "type": "RESTRIÇÃO",
+            "toolName": "Nome exato da ferramenta usada da lista de Restrições Disponíveis",
+            "chosenSubOptions": [],
+            "detailedSteps": [
+              "Primeiro passo detalhado e didático de como configurar esta ferramenta de restrição no MacroDroid."
+            ]
+          }
+        ]
       }
 
       **REGRAS CRÍTICAS:**
-      1. Use APENAS os nomes das ferramentas EXATAMENTE como aparecem nas listas de disponíveis.
-      2. Para ferramentas com sub-opções, você DEVE escolher a sub-opção mais apropriada para o pedido do usuário e incluí-la entre parênteses após o nome da ferramenta. Exemplo: "Nível da Bateria (Abaixo de 15%)".
-      3. Se nenhuma sub-opção de uma ferramenta for adequada, não use essa ferramenta ou, se for essencial, indique que uma sub-opção mais genérica seria necessária (se permitido pela ferramenta).
-      4. Se o pedido for impossível de fazer com as ferramentas e sub-opções atuais, os arrays devem vir vazios e a "explanation" deve dizer por que não é possível e o que o usuário precisa adicionar (seja uma nova ferramenta ou uma sub-opção mais adequada para uma ferramenta existente).
-      5. Seja conciso no nome da macro e na explicação. Mantenha a estrutura do JSON intacta.
-      6. Se uma ferramenta não tiver sub-opções relevantes ou se a sub-opção for implícita (ex: "Abrir Aplicativo" não precisa de sub-opção na resposta, mesmo que possa ter no futuro), apenas use o nome da ferramenta.
+      1.  **Use APENAS as ferramentas e sub-opções da lista de disponíveis.** Se uma ferramenta não estiver na lista fornecida para uma categoria (Gatilhos, Ações, Restrições), você NÃO PODE usá-la.
+      2.  Para cada passo no array "steps", forneça um guia "detailedSteps" REAL e PRÁTICO sobre como configurar essa ferramenta específica no aplicativo MacroDroid. Seja um professor. Os passos devem ser claros e acionáveis.
+      3.  Se uma ferramenta não tem sub-opções relevantes para o pedido ou se as sub-opções da ferramenta não são aplicáveis, o array "chosenSubOptions" deve ser vazio [].
+      4.  Se o pedido do usuário for impossível de realizar com as ferramentas fornecidas, retorne um JSON com "macroName": "Plano Impossível" e um único passo em "steps" do tipo "AÇÃO" com "toolName": "Explicação" e "detailedSteps" explicando o porquê (ex: ferramenta X não disponível, ou sub-opção Y necessária mas não existe) e quais tipos de ferramentas ou sub-opções o usuário deveria adicionar. Neste caso, "chosenSubOptions" também será vazio.
+      5.  Selecione a(s) sub-opção(ões) mais apropriada(s) para cada ferramenta utilizada, com base no pedido do usuário. Se múltiplas sub-opções de uma mesma ferramenta são necessárias, inclua todas no array "chosenSubOptions".
+      6.  O array "steps" deve conter pelo menos um gatilho e uma ação, a menos que seja um "Plano Impossível". Restrições são opcionais.
+      7.  Certifique-se que "type" seja exatamente "GATILHO", "AÇÃO", ou "RESTRIÇÃO".
 
       ---
       Ferramentas Disponíveis:
@@ -59,7 +77,7 @@ export async function POST(req: NextRequest) {
     const llmResponse = await ai.generate({
       model: 'googleai/gemini-1.5-flash-latest', 
       prompt: masterPrompt,
-      config: { temperature: 0.2 },
+      config: { temperature: 0.3 }, // Adjusted temperature slightly
     });
 
     const responseText = (llmResponse.text || '').replace(/```json/g, '').replace(/```/g, '').trim();
@@ -69,8 +87,6 @@ export async function POST(req: NextRequest) {
       plan = JSON.parse(responseText);
     } catch (parseError) {
       console.error("Erro ao parsear JSON da IA:", parseError, "Texto recebido:", responseText);
-      // Tenta dar uma resposta mais útil se o parse falhar.
-      // Muitas vezes a IA pode adicionar um texto antes/depois do JSON.
       const jsonMatch = responseText.match(/{[\s\S]*}/);
       if (jsonMatch && jsonMatch[0]) {
         try {
@@ -84,8 +100,7 @@ export async function POST(req: NextRequest) {
       }
     }
     
-    // Validação básica da estrutura do plano
-    if (!plan.macroName || !plan.explanation || !Array.isArray(plan.triggers) || !Array.isArray(plan.actions) || !Array.isArray(plan.constraints)) {
+    if (!plan.macroName || !Array.isArray(plan.steps)) {
         throw new Error('A IA retornou um plano com formato JSON esperado, mas com campos ausentes ou tipos incorretos.');
     }
 
