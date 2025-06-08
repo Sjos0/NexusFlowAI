@@ -17,50 +17,34 @@ export async function POST(req: NextRequest) {
     const availableConstraints = formatToolsForPrompt(tools.constraints);
 
     const masterPrompt = `
-      Você é um assistente especialista em MacroDroid. Sua tarefa é criar um plano de automação detalhado a partir do pedido de um usuário e de uma lista de ferramentas disponíveis.
+      Você é um arquiteto de automação criativo e engenhoso, especialista em MacroDroid. Sua tarefa é ir além do óbvio para criar o melhor plano possível para o usuário, considerando todas as ferramentas disponíveis.
 
-      **Sua resposta DEVE ser um objeto JSON VÁLIDO e NADA MAIS, seguindo estritamente a estrutura abaixo:**
+      **SEU PROCESSO DE PENSAMENTO (PRE-PLANNING):**
+      1.  **Analise o Objetivo Central:** Leia atentamente o pedido do usuário para entender a intenção e o resultado final desejado. Não se prenda a uma interpretação literal se uma solução mais robusta ou elegante for possível com as ferramentas.
+      2.  **Estratégia de Ferramentas:** Pense em como combinar as "Ferramentas Disponíveis" para atingir o objetivo. Lembre-se que você pode usar **múltiplos gatilhos, múltiplas ações e múltiplas restrições** se isso levar a uma automação mais completa ou eficaz. Avalie se todas as ferramentas são necessárias ou se alguma combinação é mais inteligente.
+      3.  **Seleção de Sub-Opções:** Para cada ferramenta escolhida que possua sub-opções, selecione a(s) sub-opção(ões) MAIS RELEVANTE(S) para o contexto do pedido. Se nenhuma sub-opção for adequada, não use essa ferramenta ou use-a sem sub-opções se aplicável.
+      4.  **Formule o Plano Detalhado:** Após definir a estratégia e as ferramentas, estruture sua resposta no formato JSON especificado.
+
+      **FORMATO DA RESPOSTA JSON (OBRIGATÓRIO):**
+      Sua resposta DEVE ser um objeto JSON VÁLIDO e NADA MAIS, com a seguinte estrutura:
       {
-        "macroName": "Um nome curto e descritivo para a automação.",
+        "macroName": "Um nome curto, claro e descritivo para a automação.",
         "steps": [
           {
-            "type": "GATILHO",
-            "toolName": "Nome exato da ferramenta usada da lista de Gatilhos Disponíveis",
-            "chosenSubOptions": ["Opção 1 escolhida para o gatilho", "Opção 2 se houver"],
-            "detailedSteps": [
-              "Primeiro passo detalhado e didático de como configurar esta ferramenta de gatilho no MacroDroid.",
-              "Segundo passo, explicando alguma configuração específica do gatilho.",
-              "Terceiro passo, se necessário para o gatilho."
-            ]
-          },
-          {
-            "type": "AÇÃO",
-            "toolName": "Nome exato da ferramenta usada da lista de Ações Disponíveis",
-            "chosenSubOptions": ["Opção 1 escolhida para a ação"],
-            "detailedSteps": [
-              "Primeiro passo detalhado e didático de como configurar esta ferramenta de ação no MacroDroid.",
-              "Segundo passo, explicando alguma configuração específica da ação."
-            ]
-          },
-          {
-            "type": "RESTRIÇÃO",
-            "toolName": "Nome exato da ferramenta usada da lista de Restrições Disponíveis",
-            "chosenSubOptions": [],
-            "detailedSteps": [
-              "Primeiro passo detalhado e didático de como configurar esta ferramenta de restrição no MacroDroid."
-            ]
+            "type": "GATILHO", // Ou "AÇÃO", ou "RESTRIÇÃO"
+            "toolName": "Nome exato da ferramenta utilizada (da lista de Ferramentas Disponíveis)",
+            "chosenSubOptions": ["Opção 1 escolhida para a ferramenta", "Opção 2 se houver mais de uma relevante"], // Array de strings. Vazio [] se nenhuma sub-opção for usada.
+            "detailedSteps": "Um texto único contendo a explicação detalhada em formato **Markdown**. Use listas com '-', texto em **negrito** para ênfase, e explique o porquê de cada passo de forma didática e clara. Seja prático, como se estivesse guiando o usuário dentro do app MacroDroid. Não adicione numeração automática (1., 2.) no Markdown, use hífens (-) para listas."
           }
+          // Pode haver múltiplos objetos no array "steps", inclusive com o mesmo "type" (ex: dois gatilhos).
         ]
       }
 
-      **REGRAS CRÍTICAS:**
-      1.  **Use APENAS as ferramentas e sub-opções da lista de disponíveis.** Se uma ferramenta não estiver na lista fornecida para uma categoria (Gatilhos, Ações, Restrições), você NÃO PODE usá-la.
-      2.  Para cada passo no array "steps", forneça um guia "detailedSteps" REAL e PRÁTICO sobre como configurar essa ferramenta específica no aplicativo MacroDroid. Seja um professor. Os passos devem ser claros e acionáveis.
-      3.  Se uma ferramenta não tem sub-opções relevantes para o pedido ou se as sub-opções da ferramenta não são aplicáveis, o array "chosenSubOptions" deve ser vazio [].
-      4.  Se o pedido do usuário for impossível de realizar com as ferramentas fornecidas, retorne um JSON com "macroName": "Plano Impossível" e um único passo em "steps" do tipo "AÇÃO" com "toolName": "Explicação" e "detailedSteps" explicando o porquê (ex: ferramenta X não disponível, ou sub-opção Y necessária mas não existe) e quais tipos de ferramentas ou sub-opções o usuário deveria adicionar. Neste caso, "chosenSubOptions" também será vazio.
-      5.  Selecione a(s) sub-opção(ões) mais apropriada(s) para cada ferramenta utilizada, com base no pedido do usuário. Se múltiplas sub-opções de uma mesma ferramenta são necessárias, inclua todas no array "chosenSubOptions".
-      6.  O array "steps" deve conter pelo menos um gatilho e uma ação, a menos que seja um "Plano Impossível". Restrições são opcionais.
-      7.  Certifique-se que "type" seja exatamente "GATILHO", "AÇÃO", ou "RESTRIÇÃO".
+      **REGRAS FINAIS E CRÍTICAS:**
+      - O array "steps" DEVE conter pelo menos um GATILHO e uma AÇÃO, a menos que seja um "Plano Impossível". Restrições são opcionais.
+      - Use APENAS ferramentas da lista de "Ferramentas Disponíveis". Não invente ferramentas ou sub-opções.
+      - Em "detailedSteps", a explicação deve ser útil e acionável para um usuário do MacroDroid. Forneça dicas de configuração e o raciocínio por trás das escolhas.
+      - Se o pedido for impossível de realizar com as ferramentas fornecidas, o JSON DEVE ter "macroName": "Plano Impossível" e um único objeto no array "steps" com "type": "AÇÃO", "toolName": "Explicação", "chosenSubOptions": [], e "detailedSteps" explicando em Markdown por que não é possível e quais tipos de ferramentas ou sub-opções o usuário deveria adicionar para viabilizar o plano.
 
       ---
       Ferramentas Disponíveis:
@@ -71,13 +55,13 @@ export async function POST(req: NextRequest) {
       Pedido do usuário: "${prompt}"
       ---
       
-      Gere o objeto JSON agora.
+      Gere o objeto JSON agora, seguindo seu processo de pre-planning e todas as regras à risca.
     `;
 
     const llmResponse = await ai.generate({
       model: 'googleai/gemini-1.5-flash-latest', 
       prompt: masterPrompt,
-      config: { temperature: 0.3 }, // Adjusted temperature slightly
+      config: { temperature: 0.5 },
     });
 
     const responseText = (llmResponse.text || '').replace(/```json/g, '').replace(/```/g, '').trim();
@@ -87,6 +71,7 @@ export async function POST(req: NextRequest) {
       plan = JSON.parse(responseText);
     } catch (parseError) {
       console.error("Erro ao parsear JSON da IA:", parseError, "Texto recebido:", responseText);
+      // Attempt to extract JSON from a potentially larger string if the AI included extra text
       const jsonMatch = responseText.match(/{[\s\S]*}/);
       if (jsonMatch && jsonMatch[0]) {
         try {
@@ -100,9 +85,17 @@ export async function POST(req: NextRequest) {
       }
     }
     
+    // Validate the structure of the plan
     if (!plan.macroName || !Array.isArray(plan.steps)) {
+        console.error("Estrutura do plano inválida recebida da IA:", plan);
         throw new Error('A IA retornou um plano com formato JSON esperado, mas com campos ausentes ou tipos incorretos.');
     }
+    plan.steps.forEach((step: any, index: number) => {
+        if (!step.type || !step.toolName || !Array.isArray(step.chosenSubOptions) || typeof step.detailedSteps !== 'string') {
+            console.error(`Estrutura do passo ${index} inválida:`, step);
+            throw new Error(`A IA retornou um plano com um passo (${index}) malformado.`);
+        }
+    });
 
 
     return NextResponse.json(plan);
@@ -111,8 +104,10 @@ export async function POST(req: NextRequest) {
     console.error("Erro na API /api/generate-plan:", error);
     let errorMessage = 'Ocorreu um erro ao gerar o plano JSON.';
     if (error instanceof Error) {
-        errorMessage = error.message;
+        errorMessage = error.message; // Use the specific error message
     }
+    // Return detailed error information in development for easier debugging
+    // In production, you might want to return a more generic message.
     return NextResponse.json(
       { error: errorMessage, details: error instanceof Error ? String(error) : null },
       { status: 500 }

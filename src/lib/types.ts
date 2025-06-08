@@ -7,15 +7,13 @@ export interface Tool {
   subOptions: string[];
 }
 
-// NEW: Define the structure for a single step in the plan
 export interface PlanStep {
   type: 'GATILHO' | 'AÇÃO' | 'RESTRIÇÃO';
   toolName: string;
   chosenSubOptions: string[];
-  detailedSteps: string[];
+  detailedSteps: string; // CRITICAL CHANGE: This is now a single string to hold Markdown content.
 }
 
-// NEW: The complete plan is a name and an array of these steps
 export interface GeneratedPlan {
   macroName: string;
   steps: PlanStep[];
