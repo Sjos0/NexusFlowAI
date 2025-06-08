@@ -40,24 +40,27 @@ export function SuggestionTicker({ onUseSuggestion }: SuggestionTickerProps) {
         setCurrentIndex(0);
         setIsVisible(true);
       } else if (!res.ok) {
-        let errorToLog = "Unknown API error";
+        let errorDetail = "Unknown API error";
         if (data && typeof data === 'object' && data.error) {
-          errorToLog = typeof data.error === 'string' ? data.error : JSON.stringify(data.error);
-        } else if (data) {
-          errorToLog = `Received error response with unexpected data format: ${JSON.stringify(data)}`;
+          errorDetail = typeof data.error === 'string' ? data.error : JSON.stringify(data.error);
+        } else if (data) { // Data exists but not in the expected {error: ...} format
+          errorDetail = `Received error response with unexpected data format: ${JSON.stringify(data)}`;
+        } else if (res.statusText) { // Fallback to status text if data is not helpful
+            errorDetail = `API responded with status ${res.status}: ${res.statusText}`;
         }
-        // If data is undefined/null, or data is an object without an .error field, 
-        // errorToLog might remain "Unknown API error" or be overridden by the stringify cases.
-        console.error("Failed to load suggestions:", errorToLog);
+        
+        // Ensure errorDetail is a string before concatenation
+        const finalErrorDetailString = String(errorDetail);
+        console.error("Failed to load suggestions: " + finalErrorDetailString); // Line 51 with fix
         setSuggestions([]);
       } else {
-         // res.ok is true, but data is not a non-empty array
+         // res.ok is true, but data is not a non-empty array or not an array
          setSuggestions([]);
       }
     } catch (error) {
       // This catch block handles errors from fetch() itself (e.g. network error)
       // or from res.json() if it fails to parse (e.g. response is not valid JSON)
-      console.error("Exception during suggestion loading:", error instanceof Error ? error.message : String(error));
+      console.error("Exception during suggestion loading: " + (error instanceof Error ? error.message : String(error)));
       setSuggestions([]);
     } finally {
       setIsLoading(false);
