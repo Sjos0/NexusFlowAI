@@ -9,13 +9,13 @@ import { useToolsStore } from '@/stores/useToolsStore';
 import type { ToolCategory, Tool, SubOption, Variable } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ToolCard } from '@/components';
-import { IconButton } from './IconButton'; // Import new component
+import { IconButton } from './IconButton';
 
 const categoryColors: Record<ToolCategory, string> = {
-  triggers: 'hsl(var(--destructive))', // Typically red
-  actions: 'hsl(var(--primary))',    // Typically blue or primary theme color
-  constraints: 'hsl(145 70% 40%)', // A distinct green
-  variables: 'hsl(45 90% 50%)' // A distinct yellow, e.g., gold or amber
+  triggers: 'hsl(var(--destructive))', 
+  actions: 'hsl(var(--primary))',    
+  constraints: 'hsl(145 70% 40%)', 
+  variables: 'hsl(45 90% 50%)' 
 };
 
 interface KnowledgeBasePanelProps {
@@ -33,11 +33,11 @@ interface KnowledgeBasePanelProps {
   onOpenConfirmVariableDelete: (variableId: string, variableName?: string) => void;
 }
 
-export function KnowledgeBasePanel({ 
-  isOpen, 
-  onClose, 
-  onOpenAddTool, 
-  onOpenConfirmToolDelete, 
+export function KnowledgeBasePanel({
+  isOpen,
+  onClose,
+  onOpenAddTool,
+  onOpenConfirmToolDelete,
   onOpenAddSubOption,
   onOpenManageTelas,
   onOpenEditTool,
@@ -58,6 +58,12 @@ export function KnowledgeBasePanel({
     { title: "Restrições", icon: ShieldCheck, category: "constraints" as ToolCategory, data: constraints, color: categoryColors.constraints },
     { title: "Variáveis", icon: Database, category: "variables" as ToolCategory, data: variables, color: categoryColors.variables },
   ];
+
+  const triggersData = allColumnsData.find(col => col.category === 'triggers');
+  const actionsData = allColumnsData.find(col => col.category === 'actions');
+  const constraintsData = allColumnsData.find(col => col.category === 'constraints');
+  const variablesData = allColumnsData.find(col => col.category === 'variables');
+
 
   return (
     <AnimatePresence>
@@ -80,10 +86,10 @@ export function KnowledgeBasePanel({
           >
             <div className="flex justify-between items-center p-6 border-b border-border flex-shrink-0">
               <h2 className="font-headline text-2xl text-primary">Banco de Conhecimento da IA</h2>
-              <IconButton 
-                onClick={onClose} 
+              <IconButton
+                onClick={onClose}
                 ariaLabel="Fechar painel de conhecimento"
-                className="text-muted-foreground hover:text-primary p-1 rounded-md" // focus:outline-none focus:ring-2 focus:ring-ring removed
+                className="text-muted-foreground hover:text-primary p-1 rounded-md"
               >
                 <X size={24} />
               </IconButton>
@@ -92,62 +98,160 @@ export function KnowledgeBasePanel({
               A IA usará todas as ferramentas, variáveis e sub-opções listadas aqui para criar seus planos de automação.
             </p>
             <ScrollArea className="flex-grow">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 p-6">
-                {allColumnsData.map(({ title, icon: IconElement, category, data, color }) => (
-                  category === 'variables' ? (
-                    <VariableColumn
-                      key={category}
-                      title={title}
-                      icon={IconElement}
-                      accentColor={color}
-                      variables={data as Variable[]}
-                      onAdd={onOpenAddVariable}
-                      onEdit={onOpenEditVariable}
-                      onDelete={(variableId, variableName) => onOpenConfirmVariableDelete(variableId, variableName)}
-                    />
-                  ) : (
-                    <ToolColumn 
-                      key={category} 
-                      title={title} 
-                      icon={IconElement} 
-                      onAdd={() => onOpenAddTool(category)} 
-                      accentColor={color}
-                    >
-                      {(data as Tool[]).length === 0 && (
-                         <motion.p 
-                          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                          className="text-sm text-muted-foreground text-center py-4"
-                        >
-                          Sem {title.toLowerCase()} definidos.
-                        </motion.p>
-                      )}
-                      <AnimatePresence>
-                        {(data as Tool[]).map(tool => (
-                          <motion.div 
-                            key={tool.id} 
-                            layout 
-                            initial={{ opacity: 0, y: 10 }} 
-                            animate={{ opacity: 1, y: 0 }} 
-                            exit={{ opacity: 0, x: -10, transition: { duration: 0.2 } }}
-                            transition={{ duration: 0.2 }}
+              <div className="p-6">
+                <div className="flex flex-col lg:flex-row lg:space-x-6 space-y-6 lg:space-y-0">
+                  
+                  {triggersData && (
+                    <div className="flex flex-col space-y-6 lg:w-1/4">
+                       <ToolColumn
+                        key={triggersData.category}
+                        title={triggersData.title}
+                        icon={triggersData.icon}
+                        onAdd={() => onOpenAddTool(triggersData.category)}
+                        accentColor={triggersData.color}
+                      >
+                        {(triggersData.data as Tool[]).length === 0 && (
+                          <motion.p
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            className="text-sm text-muted-foreground text-center py-4"
                           >
-                            <ToolCard
-                              name={tool.name}
-                              subOptions={tool.subOptions}
-                              onDelete={() => onOpenConfirmToolDelete(category, tool)}
-                              onEdit={() => onOpenEditTool(category, tool)}
-                              onAddSubOption={() => onOpenAddSubOption(category, tool)}
-                              accentColor={color}
-                              onEditSubOption={(subOption) => onOpenEditSubOption(category, tool, subOption)}
-                              onDeleteSubOption={(subOptionId) => onOpenConfirmSubOptionDelete(category, tool.id, subOptionId, tool.subOptions.find(so => so.id === subOptionId)?.name || 'esta sub-opção')}
-                              onManageSubOption={(subOption) => onOpenManageTelas(category, tool, subOption)}
-                            />
-                          </motion.div>
-                        ))}
-                      </AnimatePresence>
-                    </ToolColumn>
-                  )
-                ))}
+                            Sem {triggersData.title.toLowerCase()} definidos.
+                          </motion.p>
+                        )}
+                        <AnimatePresence>
+                          {(triggersData.data as Tool[]).map(tool => (
+                            <motion.div
+                              key={tool.id}
+                              layout
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, x: -10, transition: { duration: 0.2 } }}
+                              transition={{ duration: 0.2 }}
+                            >
+                              <ToolCard
+                                name={tool.name}
+                                subOptions={tool.subOptions}
+                                onDelete={() => onOpenConfirmToolDelete(triggersData.category, tool)}
+                                onEdit={() => onOpenEditTool(triggersData.category, tool)}
+                                onAddSubOption={() => onOpenAddSubOption(triggersData.category, tool)}
+                                accentColor={triggersData.color}
+                                onEditSubOption={(subOption) => onOpenEditSubOption(triggersData.category, tool, subOption)}
+                                onDeleteSubOption={(subOptionId) => onOpenConfirmSubOptionDelete(triggersData.category, tool.id, subOptionId, tool.subOptions.find(so => so.id === subOptionId)?.name || 'esta sub-opção')}
+                                onManageSubOption={(subOption) => onOpenManageTelas(triggersData.category, tool, subOption)}
+                              />
+                            </motion.div>
+                          ))}
+                        </AnimatePresence>
+                      </ToolColumn>
+                    </div>
+                  )}
+
+                  {actionsData && (
+                    <div className="flex flex-col space-y-6 lg:w-1/4">
+                      <ToolColumn
+                        key={actionsData.category}
+                        title={actionsData.title}
+                        icon={actionsData.icon}
+                        onAdd={() => onOpenAddTool(actionsData.category)}
+                        accentColor={actionsData.color}
+                      >
+                        {(actionsData.data as Tool[]).length === 0 && (
+                           <motion.p 
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            className="text-sm text-muted-foreground text-center py-4"
+                          >
+                            Sem {actionsData.title.toLowerCase()} definidos.
+                          </motion.p>
+                        )}
+                        <AnimatePresence>
+                          {(actionsData.data as Tool[]).map(tool => (
+                            <motion.div 
+                              key={tool.id} 
+                              layout 
+                              initial={{ opacity: 0, y: 10 }} 
+                              animate={{ opacity: 1, y: 0 }} 
+                              exit={{ opacity: 0, x: -10, transition: { duration: 0.2 } }}
+                              transition={{ duration: 0.2 }}
+                            >
+                              <ToolCard
+                                name={tool.name}
+                                subOptions={tool.subOptions}
+                                onDelete={() => onOpenConfirmToolDelete(actionsData.category, tool)}
+                                onEdit={() => onOpenEditTool(actionsData.category, tool)}
+                                onAddSubOption={() => onOpenAddSubOption(actionsData.category, tool)}
+                                accentColor={actionsData.color}
+                                onEditSubOption={(subOption) => onOpenEditSubOption(actionsData.category, tool, subOption)}
+                                onDeleteSubOption={(subOptionId) => onOpenConfirmSubOptionDelete(actionsData.category, tool.id, subOptionId, tool.subOptions.find(so => so.id === subOptionId)?.name || 'esta sub-opção')}
+                                onManageSubOption={(subOption) => onOpenManageTelas(actionsData.category, tool, subOption)}
+                              />
+                            </motion.div>
+                          ))}
+                        </AnimatePresence>
+                      </ToolColumn>
+                    </div>
+                  )}
+
+                  {constraintsData && (
+                     <div className="flex flex-col space-y-6 lg:w-1/4">
+                      <ToolColumn
+                        key={constraintsData.category}
+                        title={constraintsData.title}
+                        icon={constraintsData.icon}
+                        onAdd={() => onOpenAddTool(constraintsData.category)}
+                        accentColor={constraintsData.color}
+                      >
+                        {(constraintsData.data as Tool[]).length === 0 && (
+                           <motion.p 
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            className="text-sm text-muted-foreground text-center py-4"
+                          >
+                            Sem {constraintsData.title.toLowerCase()} definidos.
+                          </motion.p>
+                        )}
+                        <AnimatePresence>
+                          {(constraintsData.data as Tool[]).map(tool => (
+                            <motion.div 
+                              key={tool.id} 
+                              layout 
+                              initial={{ opacity: 0, y: 10 }} 
+                              animate={{ opacity: 1, y: 0 }} 
+                              exit={{ opacity: 0, x: -10, transition: { duration: 0.2 } }}
+                              transition={{ duration: 0.2 }}
+                            >
+                              <ToolCard
+                                name={tool.name}
+                                subOptions={tool.subOptions}
+                                onDelete={() => onOpenConfirmToolDelete(constraintsData.category, tool)}
+                                onEdit={() => onOpenEditTool(constraintsData.category, tool)}
+                                onAddSubOption={() => onOpenAddSubOption(constraintsData.category, tool)}
+                                accentColor={constraintsData.color}
+                                onEditSubOption={(subOption) => onOpenEditSubOption(constraintsData.category, tool, subOption)}
+                                onDeleteSubOption={(subOptionId) => onOpenConfirmSubOptionDelete(constraintsData.category, tool.id, subOptionId, tool.subOptions.find(so => so.id === subOptionId)?.name || 'esta sub-opção')}
+                                onManageSubOption={(subOption) => onOpenManageTelas(constraintsData.category, tool, subOption)}
+                              />
+                            </motion.div>
+                          ))}
+                        </AnimatePresence>
+                      </ToolColumn>
+                    </div>
+                  )}
+                  
+                  {variablesData && (
+                    <div className="flex flex-col space-y-6 lg:w-1/4">
+                      <VariableColumn
+                        key={variablesData.category}
+                        title={variablesData.title}
+                        icon={variablesData.icon}
+                        accentColor={variablesData.color}
+                        variables={variablesData.data as Variable[]}
+                        onAdd={onOpenAddVariable}
+                        onEdit={onOpenEditVariable}
+                        onDelete={(variableId, variableName) => onOpenConfirmVariableDelete(variableId, variableName)}
+                      />
+                    </div>
+                  )}
+
+                </div>
               </div>
             </ScrollArea>
           </motion.div>
