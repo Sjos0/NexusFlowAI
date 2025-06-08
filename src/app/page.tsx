@@ -20,7 +20,6 @@ import {
 import { useToolsStore } from '@/stores/useToolsStore';
 import type { ToolCategory, Tool, SubOption, Tela, Variable } from '@/lib/types';
 import { BotMessageSquare } from 'lucide-react';
-import { Button as ShadButton } from "@/components/ui/button";
 
 export default function Home() {
   const { 
@@ -214,29 +213,28 @@ export default function Home() {
 
   return (
     <>
-      <main className="flex flex-col h-screen bg-background p-4 lg:p-6 overflow-hidden">
-        <header className="flex justify-between items-center mb-6 flex-shrink-0">
+      <main className="flex flex-col h-screen bg-background">
+        
+        <header className="flex justify-between items-center p-4 lg:p-6 border-b border-border flex-shrink-0">
           <div>
-            <h1 className="font-headline text-3xl font-bold">
-              <span className="bg-gradient-to-r from-accent to-accent-end bg-clip-text text-transparent">
-                NexusFlow
-              </span>
+            <h1 className="font-headline text-2xl font-bold bg-gradient-to-r from-accent to-accent-end bg-clip-text text-transparent">
+              NexusFlow
             </h1>
-            <p className="text-muted-foreground">Seu co-piloto de automação para MacroDroid</p>
+            <p className="text-muted-foreground text-sm">Seu co-piloto de automação para MacroDroid</p>
           </div>
-          <ShadButton 
-            variant="outline"
+          <button 
             onClick={() => setIsKbOpen(true)}
-            className="font-semibold"
+            className="flex items-center space-x-2 bg-card text-muted-foreground px-4 py-2 rounded-lg hover:text-primary transition-colors font-medium"
           >
-            <BotMessageSquare className="mr-2 h-5 w-5" />
-            Banco de Conhecimento
-          </ShadButton>
+            <BotMessageSquare size={18} />
+            <span>Banco de Conhecimento</span>
+          </button>
         </header>
         
-        <div className="flex-grow flex justify-center items-stretch py-4"> 
+        <div className="flex-grow flex justify-center items-center overflow-y-auto p-4 lg:p-6">
           <AIPromptArea />
         </div>
+
       </main>
 
       <KnowledgeBasePanel 
