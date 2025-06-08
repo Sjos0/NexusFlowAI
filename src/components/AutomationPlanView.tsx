@@ -1,78 +1,106 @@
 // src/components/AutomationPlanView.tsx
-import type { GeneratedPlan, PlanStep } from "@/lib/types";
+import { GeneratedPlan, PlanStep } from "@/lib/types";
 import { motion } from 'framer-motion';
-import { Zap, Target, ShieldCheck, ChevronRight } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Zap, Target, ShieldCheck } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
-const stepConfigMap: Record<PlanStep['type'], { borderClass: string; icon: React.ElementType; badgeVariant: "default" | "secondary" | "destructive" | "outline" | null; iconColor: string }> = {
-  GATILHO: { borderClass: 'border-destructive', icon: Zap, badgeVariant: "destructive", iconColor: "text-destructive" },
-  AÇÃO: { borderClass: 'border-primary', icon: Target, badgeVariant: "default", iconColor: "text-primary" },
-  RESTRIÇÃO: { borderClass: 'border-green-500', icon: ShieldCheck, badgeVariant: "secondary", iconColor: "text-green-500" }, // Using a direct color for restrictions as there isn't a direct semantic match in default shadcn theme variants like "success"
+const stepConfig: Record<string, { color: string; bgColor: string; icon: React.ElementType }> = {
+  GATILHO: { color: 'text-red-400', bgColor: 'bg-red-900', icon: Zap },
+  AÇÃO: { color: 'text-cyan-400', bgColor: 'bg-cyan-900', icon: Target },
+  RESTRIÇÃO: { color: 'text-green-400', bgColor: 'bg-green-900', icon: ShieldCheck },
 };
 
 const StepCard = ({ step }: { step: PlanStep }) => {
-  const config = stepConfigMap[step.type] || stepConfigMap['AÇÃO']; // Fallback to action if type is unexpected
+  const config = stepConfig[step.type] || { color: 'text-gray-400', bgColor: 'bg-gray-700', icon: 'div' as React.ElementType };
   const Icon = config.icon;
 
   return (
-    <Card className={`shadow-md border-l-4 ${config.borderClass}`}>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <Icon className={`h-5 w-5 mr-3 ${config.iconColor}`} />
-            <CardTitle className="text-lg text-foreground">{step.toolName}</CardTitle>
-          </div>
-          {config.badgeVariant && <Badge variant={config.badgeVariant} className="ml-2">{step.type}</Badge>}
+    <div className={`rounded-lg shadow-lg border border-border overflow-hidden`}>
+      {/* Header do Card */}
+      <div className={`p-4 flex justify-between items-center ${config.bgColor} bg-opacity-30 border-b border-border`}>
+        <div className="flex items-center">
+          <Icon className={`h-6 w-6 mr-3 ${config.color}`} />
+          <h3 className="font-headline text-lg text-foreground">{step.toolName}</h3>
         </div>
-      </CardHeader>
-      <CardContent className="text-sm space-y-3 pt-0">
+        <div className={`text-xs font-bold py-1 px-3 rounded-full ${config.bgColor} ${config.color}`}>
+          {step.type}
+        </div>
+      </div>
+
+      {/* Corpo do Card */}
+      <div className="p-4 bg-card space-y-4">
         {step.chosenSubOptions && step.chosenSubOptions.length > 0 && (
           <div>
-            <h4 className="font-semibold text-muted-foreground mb-1">Opções Selecionadas:</h4>
-            <div className="flex flex-wrap gap-1">
+            <h4 className="font-semibold text-muted-foreground mb-2">Opções Selecionadas:</h4>
+            <div className="flex flex-wrap gap-2">
               {step.chosenSubOptions.map((opt, i) => (
-                <Badge key={i} variant="outline" className="font-normal bg-muted/50">{opt}</Badge>
+                <span key={i} className="text-xs bg-muted text-muted-foreground py-1 px-2 rounded-md">{opt}</span>
               ))}
             </div>
           </div>
         )}
+        
         <div>
-          <h4 className="font-semibold text-muted-foreground mb-2 mt-3">Passo a Passo da Configuração:</h4>
-          <div className="prose prose-sm prose-invert max-w-none text-foreground/90 
-                        prose-headings:text-foreground prose-strong:text-foreground 
-                        prose-ul:list-disc prose-li:marker:text-accent
-                        prose-a:text-accent hover:prose-a:text-accent/80">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+          <h4 className="font-semibold text-muted-foreground mb-2">Passo a Passo da Configuração:</h4>
+          <div className="prose prose-sm prose-invert max-w-none text-muted-foreground">
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                code({node, inline, className, children, ...props}) {
+                  const match = /language-(\w+)/.exec(className || '')
+                  return !inline && match ? (
+                     // For fenced code blocks, use the pre component styling by wrapping in pre
+                    <pre className="bg-muted/50 rounded p-3 overflow-x-auto my-2">
+                      <code className={`language-${match[1]}`} {...props}>
+                        {children}
+                      </code>
+                    </pre>
+                  ) : (
+                    // For inline code
+                    <code className="bg-muted/80 text-accent rounded px-1 py-0.5 text-xs break-words font-mono" {...props}>
+                      {children}
+                    </code>
+                  )
+                },
+                pre({node, children, ...props}) {
+                  // This 'pre' handles markdown like triple-backtick blocks
+                  // We find the 'code' child to extract its children for direct rendering inside our styled pre
+                  const codeChild = React.Children.toArray(children).find(
+                    (child) => React.isValidElement(child) && child.type === 'code'
+                  ) as React.ReactElement | undefined;
+
+                  return (
+                    <pre className="bg-muted/50 rounded p-3 overflow-x-auto my-2" {...props}>
+                      {codeChild ? codeChild.props.children : children}
+                    </pre>
+                  );
+                }
+              }}
+            >
               {step.detailedSteps}
             </ReactMarkdown>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
 
 export function AutomationPlanView({ plan }: { plan: GeneratedPlan }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: "easeOut" }}
-      className="mt-6 bg-card p-4 sm:p-6 rounded-lg shadow-lg"
+      transition={{ duration: 0.5 }}
+      className="mt-6 space-y-4"
     >
-      <h2 className="font-headline text-2xl sm:text-3xl font-bold text-primary mb-6 pb-2 border-b border-border">
+      <h2 className="font-headline text-3xl text-primary font-bold bg-gradient-to-r from-accent to-accent-end bg-clip-text text-transparent pb-2">
         {plan.macroName}
       </h2>
-      {plan.steps && plan.steps.length > 0 ? (
-        <div className="space-y-6">
-          {plan.steps.map((step, index) => <StepCard key={index} step={step} />)}
-        </div>
-      ) : (
-        <p className="text-muted-foreground text-center py-4">Nenhum passo definido para este plano.</p>
-      )}
+      <div className="space-y-6">
+        {plan.steps.map((step, index) => <StepCard key={index} step={step} />)}
+      </div>
     </motion.div>
   );
 }
