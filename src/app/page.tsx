@@ -10,16 +10,16 @@ import {
   AddSubOptionModal, 
   KnowledgeBasePanel, 
   AIPromptArea, 
-  ManageTelasModal 
+  ManageTelasModal,
+  EditToolModal // Added EditToolModal
 } from '@/components';
 // Util & Hook Imports
 import { useToolsStore } from '@/stores/useToolsStore';
-import type { ToolCategory, Tool, SubOption, Tela } from '@/lib/types'; // Ensure Tela is imported
+import type { ToolCategory, Tool, SubOption, Tela } from '@/lib/types';
 import { BotMessageSquare } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 
 export default function Home() {
-  // Note: toolsState will give access to triggers, actions, constraints directly if needed.
   const { hydrate, updateTool, removeTool, addTool } = useToolsStore();
 
   useEffect(() => { 
@@ -37,6 +37,11 @@ export default function Home() {
     category: ToolCategory | null;
     subOption: SubOption | null;
   }>({ isOpen: false, toolId: null, category: null, subOption: null });
+
+  const [editToolModalState, setEditToolModalState] = useState<{
+    isOpen: boolean;
+    tool: Tool & { category: ToolCategory } | null;
+  }>({ isOpen: false, tool: null });
   
   const [isKbOpen, setIsKbOpen] = useState(false);
 
@@ -78,7 +83,6 @@ export default function Home() {
     const { tool } = addSubOptionModalState;
     if (tool) {
       const newSubOptionsFromNames: SubOption[] = newSubOptionNames.map(name => ({ id: crypto.randomUUID(), name, telas: [] }));
-      // Ensure all existing subOptions are SubOption objects
       const existingSubOptionsObjects: SubOption[] = tool.subOptions.map(so => 
         typeof so === 'string' ? { id: crypto.randomUUID(), name: so, telas: [] } : so
       );
@@ -88,17 +92,14 @@ export default function Home() {
     setAddSubOptionModalState({ isOpen: false, tool: null });
   };
 
-  // Handler to open the ManageTelasModal
   const handleOpenManageTelas = (toolId: string, category: ToolCategory, subOption: SubOption) => {
     setManageTelasModalState({ isOpen: true, toolId, category, subOption });
   };
 
-  // Handler to save the updated telas from ManageTelasModal
   const handleSaveTelas = (updatedSubOption: SubOption) => {
     const { toolId, category } = manageTelasModalState;
     if (!toolId || !category) return;
 
-    // Directly use the Zustand hook to get the current state for the specific category
     const toolsForCategory = useToolsStore.getState()[category];
     const toolToUpdate = toolsForCategory.find(t => t.id === toolId);
 
@@ -110,6 +111,18 @@ export default function Home() {
 
     updateTool(category, toolId, { subOptions: newSubOptionsForTool });
     // No need to setManageTelasModalState here as onClose in the modal will handle closing
+  };
+
+  const handleOpenEditTool = (category: ToolCategory, tool: Tool) => {
+    setEditToolModalState({ isOpen: true, tool: { ...tool, category } });
+  };
+
+  const handleEditToolSave = (newName: string) => {
+    if (editToolModalState.tool) {
+      const { id, category } = editToolModalState.tool;
+      updateTool(category, id, { name: newName });
+    }
+    setEditToolModalState({ isOpen: false, tool: null });
   };
 
   return (
@@ -134,7 +147,6 @@ export default function Home() {
           </Button>
         </header>
         
-        {/* MODIFICATION: The main content area now grows and provides a base for the chat */}
         <div className="flex-grow flex justify-center items-stretch py-4"> 
           <AIPromptArea />
         </div>
@@ -147,6 +159,7 @@ export default function Home() {
         onOpenConfirmDelete={handleOpenConfirmDelete}
         onOpenAddSubOption={handleOpenAddSubOption}
         onOpenManageTelas={(category, tool, subOption) => handleOpenManageTelas(tool.id, category, subOption)}
+        onOpenEditTool={handleOpenEditTool} // Pass new prop
       />
 
       <AnimatePresence>
@@ -177,6 +190,13 @@ export default function Home() {
             onClose={() => setManageTelasModalState({ isOpen: false, toolId: null, category: null, subOption: null })}
             subOption={manageTelasModalState.subOption}
             onSave={handleSaveTelas}
+          />
+        )}
+        {editToolModalState.isOpen && editToolModalState.tool && (
+          <EditToolModal
+            onClose={() => setEditToolModalState({ isOpen: false, tool: null })}
+            onSave={handleEditToolSave}
+            tool={editToolModalState.tool}
           />
         )}
       </AnimatePresence>

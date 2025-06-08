@@ -1,24 +1,28 @@
 // src/components/ToolCard.tsx
 // THIS VERSION IS GUARANTEED TO BE CORRECT
-import { Trash2, Plus, FileText } from 'lucide-react';
-import { SubOption, Tool } from '@/lib/types'; // Ensure Tool is imported if used in props
+import { Trash2, Plus, FileText, Pencil } from 'lucide-react'; // Add Pencil icon
+import type { SubOption, Tool } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 
 interface ToolCardProps {
   name: string;
   subOptions: SubOption[];
   onDelete: () => void;
+  onEdit: () => void; // Add new prop
   onAddSubOption: () => void;
   // Prop name updated for clarity
   onManageSubOption: (subOption: SubOption) => void;
 }
 
-export function ToolCard({ name, subOptions, onDelete, onAddSubOption, onManageSubOption }: ToolCardProps) {
+export function ToolCard({ name, subOptions, onDelete, onEdit, onAddSubOption, onManageSubOption }: ToolCardProps) {
   return (
     <div className="group bg-card p-3 rounded-md shadow-sm flex flex-col transition-colors hover:bg-muted border border-border cursor-default">
       <div className="flex justify-between items-start w-full">
         <p className="font-medium text-card-foreground group-hover:text-primary flex-1 mr-2">{name}</p>
         <div className="flex items-center space-x-1.5 text-muted-foreground opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+          <Button variant="ghost" size="icon" onClick={onEdit} className="hover:text-accent text-muted-foreground h-6 w-6" aria-label="Editar ferramenta" title="Editar ferramenta">
+            <Pencil size={16} />
+          </Button>
           <Button variant="ghost" size="icon" onClick={onAddSubOption} className="hover:text-accent text-muted-foreground h-6 w-6" aria-label="Adicionar sub-opções" title="Adicionar sub-opções">
             <Plus size={16} />
           </Button>

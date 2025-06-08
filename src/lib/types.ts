@@ -30,7 +30,7 @@ export interface GeneratedPlan {
   steps: PlanStep[];
 }
 
-// NEW: Define the structure for a single message in the chat history.
+// For chat history
 export interface ChatMessage {
   id: string;
   role: 'user' | 'model';

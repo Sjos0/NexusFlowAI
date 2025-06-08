@@ -6,7 +6,7 @@ import { ToolColumn } from './ToolColumn';
 import { ToolCard } from './ToolCard';
 import { X, Zap, Target, ShieldCheck } from 'lucide-react';
 import { useToolsStore } from '@/stores/useToolsStore';
-import type { ToolCategory, Tool, SubOption } from '@/lib/types'; // Import SubOption
+import type { ToolCategory, Tool, SubOption } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface KnowledgeBasePanelProps {
@@ -15,7 +15,8 @@ interface KnowledgeBasePanelProps {
   onOpenAddTool: (category: ToolCategory) => void;
   onOpenConfirmDelete: (category: ToolCategory, tool: Tool) => void;
   onOpenAddSubOption: (category: ToolCategory, tool: Tool) => void;
-  onOpenManageTelas: (category: ToolCategory, tool: Tool, subOption: SubOption) => void; // Updated prop
+  onOpenManageTelas: (category: ToolCategory, tool: Tool, subOption: SubOption) => void;
+  onOpenEditTool: (category: ToolCategory, tool: Tool) => void; // New prop
 }
 
 export function KnowledgeBasePanel({ 
@@ -24,7 +25,8 @@ export function KnowledgeBasePanel({
   onOpenAddTool, 
   onOpenConfirmDelete, 
   onOpenAddSubOption,
-  onOpenManageTelas // New prop
+  onOpenManageTelas,
+  onOpenEditTool // New prop
 }: KnowledgeBasePanelProps) {
   const triggers = useToolsStore(state => state.triggers);
   const actions = useToolsStore(state => state.actions);
@@ -95,8 +97,8 @@ export function KnowledgeBasePanel({
                             subOptions={tool.subOptions}
                             onDelete={() => onOpenConfirmDelete(category, tool)}
                             onAddSubOption={() => onOpenAddSubOption(category, tool)}
-                            // Updated to pass correct arguments
                             onManageSubOption={(subOption) => onOpenManageTelas(category, tool, subOption)}
+                            onEdit={() => onOpenEditTool(category, tool)} // Pass new prop
                           />
                         </motion.div>
                       ))}
