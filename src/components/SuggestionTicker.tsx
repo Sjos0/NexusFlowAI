@@ -4,8 +4,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lightbulb } from 'lucide-react';
-import { Button } from '@/components/ui/button'; // Using ShadCN Button
-import { useHasMounted } from '@/hooks/useHasMounted'; // To prevent hydration issues with window
+import { Button } from '@/components/ui/button';
+import { useHasMounted } from '@/hooks/useHasMounted';
 
 interface Suggestion {
   title: string;
@@ -32,59 +32,69 @@ export function SuggestionTicker({ onUseSuggestion }: SuggestionTickerProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tools }),
       });
+      
       const data = await res.json();
+
       if (res.ok && Array.isArray(data) && data.length > 0) {
         setSuggestions(data);
         setCurrentIndex(0);
-        setIsVisible(true); // Make first suggestion visible immediately after loading
+        setIsVisible(true);
       } else if (!res.ok) {
-        console.error("Failed to load suggestions:", data.error || "Unknown API error");
+        let errorToLog = "Unknown API error";
+        if (data && typeof data === 'object' && data.error) {
+          errorToLog = typeof data.error === 'string' ? data.error : JSON.stringify(data.error);
+        } else if (data) {
+          errorToLog = `Received error response with unexpected data format: ${JSON.stringify(data)}`;
+        }
+        // If data is undefined/null, or data is an object without an .error field, 
+        // errorToLog might remain "Unknown API error" or be overridden by the stringify cases.
+        console.error("Failed to load suggestions:", errorToLog);
         setSuggestions([]);
       } else {
-         setSuggestions([]); // API returned ok but no valid data
+         // res.ok is true, but data is not a non-empty array
+         setSuggestions([]);
       }
     } catch (error) {
-      console.error("Failed to load suggestions", error);
+      // This catch block handles errors from fetch() itself (e.g. network error)
+      // or from res.json() if it fails to parse (e.g. response is not valid JSON)
+      console.error("Exception during suggestion loading:", error instanceof Error ? error.message : String(error));
       setSuggestions([]);
     } finally {
       setIsLoading(false);
     }
   }, [isLoading]); // Add isLoading to dependencies
 
-  // Effect for event listener
   useEffect(() => {
-    if (!hasMounted) return; // Ensure window is available
+    if (!hasMounted) return;
 
-    const handleLoadSuggestions = (e: Event) => {
+    const handleLoadSuggestionsEvent = (e: Event) => {
       const customEvent = e as CustomEvent;
       if (customEvent.detail) {
         loadSuggestions(customEvent.detail);
       }
     };
 
-    window.addEventListener('load-suggestions', handleLoadSuggestions);
+    window.addEventListener('load-suggestions', handleLoadSuggestionsEvent);
     return () => {
-      window.removeEventListener('load-suggestions', handleLoadSuggestions);
+      window.removeEventListener('load-suggestions', handleLoadSuggestionsEvent);
     };
   }, [hasMounted, loadSuggestions]);
 
-  // The animation cycle effect
   useEffect(() => {
-    if (!hasMounted || suggestions.length === 0 || !isVisible) return;
+    if (!hasMounted || suggestions.length === 0 || !isVisible) {
+      if (isVisible && suggestions.length === 0) { // If it was visible but suggestions cleared
+          setIsVisible(false);
+      }
+      return;
+    }
 
-    // This timer handles making the current item INVISIBLE after 6 seconds
     const visibilityTimer = setTimeout(() => {
       setIsVisible(false);
-    }, 6000); // Visible for 6 seconds
+    }, 6000);
 
-    // This timer handles changing to the NEXT item after 7 seconds
-    // (6s visible + 1s for exit/enter animation)
-    // It will then set isVisible to true for the new item
     const cycleTimer = setTimeout(() => {
       setCurrentIndex((prevIndex) => {
         const nextIndex = (prevIndex + 1) % suggestions.length;
-        // Make the *next* item visible
-        // The AnimatePresence key change will trigger the animation
         setIsVisible(true); 
         return nextIndex;
       });
@@ -97,30 +107,28 @@ export function SuggestionTicker({ onUseSuggestion }: SuggestionTickerProps) {
   }, [currentIndex, suggestions, isVisible, hasMounted]);
 
 
-  if (!hasMounted || suggestions.length === 0 && !isLoading) {
-    // Optionally, show a loading state or nothing if not loading and no suggestions
-    return isLoading ? <div className="h-20 flex items-center justify-center text-muted-foreground">Carregando sugestões...</div> : null;
+  if (!hasMounted || (suggestions.length === 0 && !isLoading)) {
+    return isLoading ? <div className="h-20 flex items-center justify-center text-muted-foreground text-sm">Carregando sugestões...</div> : null;
   }
-  if (suggestions.length === 0 && isLoading) {
-    return <div className="h-20 flex items-center justify-center text-muted-foreground">Carregando sugestões...</div>;
+  if (suggestions.length === 0 && isLoading) { // Ensure loading is shown even if suggestions array is empty during load
+    return <div className="h-20 flex items-center justify-center text-muted-foreground text-sm">Carregando sugestões...</div>;
   }
-
 
   return (
-    <div className="h-20 relative overflow-hidden my-2"> {/* Added my-2 for spacing */}
-      <AnimatePresence mode="wait"> {/* mode="wait" can help with smoother transitions */}
+    <div className="h-20 relative overflow-hidden my-2">
+      <AnimatePresence mode="wait">
         {isVisible && suggestions[currentIndex] && (
           <motion.div
-            key={currentIndex} // Key change triggers enter/exit
+            key={currentIndex}
             initial={{ y: '100%', opacity: 0 }}
             animate={{ y: '0%', opacity: 1 }}
             exit={{ y: '-100%', opacity: 0 }}
             transition={{ type: 'spring', stiffness: 120, damping: 20 }}
             className="absolute inset-0 bg-card border border-border p-3 rounded-lg flex items-center justify-between shadow-md"
           >
-            <div className="flex items-center overflow-hidden mr-2"> {/* Added overflow-hidden and mr-2 */}
+            <div className="flex items-center overflow-hidden mr-2">
               <Lightbulb className="text-yellow-400 mr-3 flex-shrink-0 h-5 w-5" />
-              <div className="flex-grow overflow-hidden"> {/* Added flex-grow and overflow-hidden */}
+              <div className="flex-grow overflow-hidden">
                 <h4 className="font-semibold text-sm text-foreground truncate">{suggestions[currentIndex].title}</h4>
                 <p className="text-xs text-muted-foreground truncate">{suggestions[currentIndex].prompt}</p>
               </div>
