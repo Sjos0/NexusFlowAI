@@ -1,7 +1,7 @@
 // src/app/api/generate-suggestions/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { generate } from 'genkit/ai';
-import { googleAI } from '@genkit-ai/google-ai';
+import { googleAI } from '@genkit-ai/googleai'; // Corrected import
 import type { Tool } from '@/lib/types';
 import '../../../../genkit.config';
 
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     `;
 
     const llmResponse = await generate({
-      model: googleAI('gemini-2.5-flash-preview-05-20'),
+      model: googleAI('gemini-2.5-flash-preview-05-20'), // Using corrected googleAI
       prompt: masterPrompt,
       config: { temperature: 0.8 }, // Higher temperature for more creativity
     });

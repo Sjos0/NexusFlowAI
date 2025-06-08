@@ -1,7 +1,7 @@
 // src/app/api/generate-plan/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { generate } from 'genkit/ai';
-import { googleAI } from '@genkit-ai/google-ai';
+import { googleAI } from '@genkit-ai/googleai'; // Corrected import
 import type { Message } from 'genkit/ai'; // Correct type for Genkit messages
 import type { Tool, ChatMessage, GeneratedPlan } from '@/lib/types';
 // The user explicitly asked for this import.
@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
     }
     
     const llmResponse = await generate({
-      model: googleAI('gemini-2.5-flash-preview-05-20'),
+      model: googleAI('gemini-2.5-flash-preview-05-20'), // Using corrected googleAI
       system: `${masterPrompt}\n\nFerramentas disponíveis para este turno: ${availableTools}`, // Add available tools to system prompt
       history: history, // Pass the modified history (without the last user message)
       prompt: currentPromptText, // The last user message

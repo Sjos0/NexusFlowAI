@@ -1,6 +1,6 @@
 // genkit.config.ts
 import { configureGenkit } from 'genkit';
-import { googleAI } from '@genkit-ai/google-ai';
+import { googleAI } from '@genkit-ai/googleai'; // Corrected import
 
 export default configureGenkit({
   plugins: [
