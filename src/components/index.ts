@@ -8,6 +8,8 @@ export * from './EditSubOptionModal';
 export * from './EditToolModal';
 export * from './KnowledgeBasePanel';
 export * from './ManageTelasModal';
-// SuggestionTicker was here
 export * from './ToolCard';
 export * from './ToolColumn';
+export * from './AddEditVariableModal';
+export * from './VariableCard';
+export * from './VariableColumn';

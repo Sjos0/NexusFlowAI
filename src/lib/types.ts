@@ -1,5 +1,16 @@
 // src/lib/types.ts
+export const variableTypes = ['Booleano', 'Inteiro', 'String', 'Decimal', 'Dicionário', 'Lista'] as const;
+export type VariableType = typeof variableTypes[number];
+
 export type ToolCategory = 'triggers' | 'actions' | 'constraints' | 'variables';
+
+export interface Variable {
+  id: string;
+  name: string;
+  type: VariableType;
+  isSecure: boolean;
+  description?: string;
+}
 
 export interface Tela {
   id: string;
@@ -18,17 +29,11 @@ export interface Tool {
   subOptions: SubOption[];
 }
 
-export interface Variable {
-  id: string;
-  name: string;
-  description: string;
-}
-
 export interface PlanStep {
   type: 'GATILHO' | 'AÇÃO' | 'RESTRIÇÃO';
   toolName: string;
   chosenSubOptions: string[];
-  detailedSteps: string; // Holds Markdown content
+  detailedSteps: string;
 }
 
 export interface GeneratedPlan {

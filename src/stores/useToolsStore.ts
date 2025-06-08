@@ -1,6 +1,7 @@
 // src/stores/useToolsStore.ts
 import { create } from 'zustand';
-import type { Tool, ToolCategory, Variable } from '@/lib/types';
+import type { Tool, ToolCategory, Variable, VariableType, SubOption, Tela } from '@/lib/types';
+import { variableTypes } from '@/lib/types';
 
 const STORAGE_KEY = 'nexusflow-tools-storage';
 
@@ -22,12 +23,22 @@ const loadState = (): StoredState => {
 
   if (item) {
     try {
-      const parsed = JSON.parse(item) as Partial<StoredState>; // Cast to partial to handle missing keys
+      const parsed = JSON.parse(item) as Partial<StoredState>;
+      
+      // Ensure variables have all required fields with defaults
+      const validatedVariables = (parsed.variables || []).map(v => ({
+        id: v.id || crypto.randomUUID(), // Should always exist from save, but fallback
+        name: v.name || 'Variável Sem Nome',
+        type: variableTypes.includes(v.type as VariableType) ? v.type as VariableType : 'String',
+        isSecure: typeof v.isSecure === 'boolean' ? v.isSecure : false,
+        description: v.description || '',
+      }));
+
       return {
         triggers: parsed.triggers || [],
         actions: parsed.actions || [],
         constraints: parsed.constraints || [],
-        variables: parsed.variables || [], // Ensure variables defaults to empty array if not present
+        variables: validatedVariables,
       };
     } catch (error) {
       console.warn(
@@ -63,14 +74,14 @@ export interface ToolsState {
   addTool: (category: ToolCategory, tool: Tool) => void;
   removeTool: (category: ToolCategory, toolId: string) => void;
   updateTool: (category: ToolCategory, toolId: string, updatedTool: Partial<Tool>) => void;
-  addVariable: (variable: Variable) => void;
+  addVariable: (variableData: Omit<Variable, 'id' | 'description'>) => void; // Description is optional, handled internally if needed
   removeVariable: (variableId: string) => void;
-  updateVariable: (variableId: string, updatedData: Partial<Variable>) => void;
+  updateVariable: (variableId: string, updatedData: Partial<Omit<Variable, 'id' | 'description'>>) => void;
   hydrate: () => void;
 }
 
 export const useToolsStore = create<ToolsState>((set) => {
-  const initialState = loadState(); // Load initial state once
+  const initialState = loadState();
   return {
     triggers: initialState.triggers,
     actions: initialState.actions,
@@ -78,15 +89,12 @@ export const useToolsStore = create<ToolsState>((set) => {
     variables: initialState.variables,
 
     hydrate: () => {
-      // Hydrate ensures that if the store was initialized on server, client syncs with localStorage
-      // For this setup, loadState() at create time might be enough if no server-side init is happening.
-      // However, keeping hydrate if it's called explicitly on app mount.
       set(loadState());
     },
 
     addTool: (category, tool) => {
       set((state) => {
-        if (category === 'variables') { // Should not happen with current UI but good for type safety
+        if (category === 'variables') {
           console.warn("Attempted to add a variable using addTool. Use addVariable instead.");
           return state;
         }
@@ -125,9 +133,14 @@ export const useToolsStore = create<ToolsState>((set) => {
       });
     },
 
-    addVariable: (variable) => {
+    addVariable: (variableData) => {
       set((state) => {
-        const newState = { ...state, variables: [...state.variables, variable] };
+        const newVariable: Variable = { 
+          ...variableData, 
+          id: crypto.randomUUID(),
+          description: '', // Initialize with empty description
+        };
+        const newState = { ...state, variables: [...state.variables, newVariable] };
         saveState({ triggers: newState.triggers, actions: newState.actions, constraints: newState.constraints, variables: newState.variables });
         return newState;
       });
@@ -155,8 +168,3 @@ export const useToolsStore = create<ToolsState>((set) => {
     },
   };
 });
-
-// Call hydrate on initial load if not done elsewhere (e.g., in _app.tsx or a root layout client component)
-// For this specific setup, direct initialization in create() with loadState() is primary.
-// If explicit hydration is needed on app mount, it should be called from a useEffect in a top-level client component.
-// For example, in Home (page.tsx): useEffect(() => { useToolsStore.getState().hydrate(); }, []);

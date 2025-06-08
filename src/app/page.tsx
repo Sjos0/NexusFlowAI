@@ -1,3 +1,4 @@
+
 // src/app/page.tsx
 'use client';
 
@@ -12,23 +13,32 @@ import {
   AIPromptArea, 
   ManageTelasModal,
   EditToolModal,
-  EditSubOptionModal // Added EditSubOptionModal
+  EditSubOptionModal,
+  AddEditVariableModal
 } from '@/components';
 // Util & Hook Imports
 import { useToolsStore } from '@/stores/useToolsStore';
-import type { ToolCategory, Tool, SubOption, Tela } from '@/lib/types'; // Ensure Tela is imported
+import type { ToolCategory, Tool, SubOption, Tela, Variable } from '@/lib/types';
 import { BotMessageSquare } from 'lucide-react';
-import { Button as ShadButton } from "@/components/ui/button"; // Alias for ShadCN button if needed
+import { Button as ShadButton } from "@/components/ui/button";
 
 export default function Home() {
-  const { hydrate, updateTool, removeTool, addTool } = useToolsStore();
+  const { 
+    hydrate, 
+    updateTool, 
+    removeTool, 
+    addTool,
+    addVariable,
+    removeVariable,
+    updateVariable
+  } = useToolsStore();
 
   useEffect(() => { 
     hydrate(); 
   }, [hydrate]);
 
   // State for Modals
-  const [addToolModalState, setAddToolModalState] = useState({ isOpen: false, category: null as ToolCategory | null, categoryTitle: '' });
+  const [addToolModalState, setAddToolModalState] = useState<{ isOpen: boolean; category: ToolCategory | null; categoryTitle: string }>({ isOpen: false, category: null, categoryTitle: '' });
   const [confirmToolDeleteModalState, setConfirmToolDeleteModalState] = useState<{ isOpen: boolean; toolId: string | null; category: ToolCategory | null; toolName: string | null }>({ isOpen: false, toolId: null, category: null, toolName: null });
   const [addSubOptionModalState, setAddSubOptionModalState] = useState<{ isOpen: boolean; tool: (Tool & { category: ToolCategory }) | null }>({ isOpen: false, tool: null });
   
@@ -59,12 +69,16 @@ export default function Home() {
     subOptionName: string;
   } | null>(null);
   
+  const [addEditVariableModalState, setAddEditVariableModalState] = useState<{ isOpen: boolean; variable?: Variable }>({ isOpen: false });
+  const [confirmVariableDeleteModalState, setConfirmVariableDeleteModalState] = useState<{ isOpen: boolean; variableId: string | null; variableName?: string }>({ isOpen: false, variableId: null });
+
   const [isKbOpen, setIsKbOpen] = useState(false);
 
   const categoryTitles: Record<ToolCategory, string> = {
     triggers: 'Gatilhos',
     actions: 'Ações',
-    constraints: 'Restrições'
+    constraints: 'Restrições',
+    variables: 'Variáveis'
   };
 
   // === Handlers for Modals ===
@@ -73,7 +87,7 @@ export default function Home() {
   };
 
   const handleAddToolSubmit = (name: string, subOptionNames: string[]) => {
-    if (addToolModalState.category) {
+    if (addToolModalState.category && addToolModalState.category !== 'variables') {
       const newSubOptions: SubOption[] = subOptionNames.map(soName => ({ id: crypto.randomUUID(), name: soName, telas: [] }));
       addTool(addToolModalState.category, { id: crypto.randomUUID(), name, subOptions: newSubOptions });
     }
@@ -85,7 +99,7 @@ export default function Home() {
   };
   
   const handleConfirmToolDelete = () => {
-    if (confirmToolDeleteModalState.toolId && confirmToolDeleteModalState.category) {
+    if (confirmToolDeleteModalState.toolId && confirmToolDeleteModalState.category && confirmToolDeleteModalState.category !== 'variables') {
       removeTool(confirmToolDeleteModalState.category, confirmToolDeleteModalState.toolId);
     }
     setConfirmToolDeleteModalState({ isOpen: false, toolId: null, category: null, toolName: null });
@@ -97,7 +111,7 @@ export default function Home() {
 
   const handleAddSubOptionSubmit = (newSubOptionNames: string[]) => {
     const { tool } = addSubOptionModalState;
-    if (tool) {
+    if (tool && tool.category !== 'variables') {
       const newSubOptionsFromNames: SubOption[] = newSubOptionNames.map(name => ({ id: crypto.randomUUID(), name, telas: [] }));
       const existingSubOptionsObjects: SubOption[] = tool.subOptions.map(so => 
         typeof so === 'string' ? { id: crypto.randomUUID(), name: so, telas: [] } : so
@@ -114,10 +128,10 @@ export default function Home() {
 
   const handleSaveTelas = (updatedSubOption: SubOption) => {
     const { toolId, category } = manageTelasModalState;
-    if (!toolId || !category) return;
+    if (!toolId || !category || category === 'variables') return;
 
     const toolsForCategory = useToolsStore.getState()[category];
-    const toolToUpdate = toolsForCategory.find(t => t.id === toolId);
+    const toolToUpdate = (toolsForCategory as Tool[]).find(t => t.id === toolId);
 
     if (!toolToUpdate) return;
 
@@ -126,6 +140,7 @@ export default function Home() {
     );
 
     updateTool(category, toolId, { subOptions: newSubOptionsForTool });
+    setManageTelasModalState({ isOpen: false, toolId: null, category: null, subOption: null });
   };
 
   const handleOpenEditTool = (category: ToolCategory, tool: Tool) => {
@@ -133,7 +148,7 @@ export default function Home() {
   };
 
   const handleEditToolSave = (newName: string) => {
-    if (editToolModalState.tool) {
+    if (editToolModalState.tool && editToolModalState.tool.category !== 'variables') {
       const { id, category } = editToolModalState.tool;
       updateTool(category, id, { name: newName });
     }
@@ -145,9 +160,9 @@ export default function Home() {
   };
 
   const handleEditSubOptionSave = (newName: string) => {
-    if (!editSubOptionModalState) return;
+    if (!editSubOptionModalState || editSubOptionModalState.category === 'variables') return;
     const { toolId, category, subOption } = editSubOptionModalState;
-    const toolToUpdate = useToolsStore.getState()[category].find(t => t.id === toolId);
+    const toolToUpdate = (useToolsStore.getState()[category] as Tool[]).find(t => t.id === toolId);
     if (!toolToUpdate) return;
     const newSubOptions = toolToUpdate.subOptions.map(so => so.id === subOption.id ? { ...so, name: newName } : so);
     updateTool(category, toolId, { subOptions: newSubOptions });
@@ -159,13 +174,42 @@ export default function Home() {
   };
 
   const handleConfirmSubOptionDelete = () => {
-    if (!confirmSubOptionDeleteModalState) return;
+    if (!confirmSubOptionDeleteModalState || confirmSubOptionDeleteModalState.category === 'variables') return;
     const { toolId, category, subOptionId } = confirmSubOptionDeleteModalState;
-    const toolToUpdate = useToolsStore.getState()[category].find(t => t.id === toolId);
+    const toolToUpdate = (useToolsStore.getState()[category] as Tool[]).find(t => t.id === toolId);
     if (!toolToUpdate) return;
     const newSubOptions = toolToUpdate.subOptions.filter(so => so.id !== subOptionId);
     updateTool(category, toolId, { subOptions: newSubOptions });
     setConfirmSubOptionDeleteModalState(null);
+  };
+
+  // Variable Handlers
+  const handleOpenAddVariable = () => {
+    setAddEditVariableModalState({ isOpen: true });
+  };
+
+  const handleOpenEditVariable = (variable: Variable) => {
+    setAddEditVariableModalState({ isOpen: true, variable });
+  };
+
+  const handleSaveVariable = (variableData: Omit<Variable, 'id' | 'description'>) => {
+    if (addEditVariableModalState.variable) { 
+      updateVariable(addEditVariableModalState.variable.id, variableData);
+    } else { 
+      addVariable(variableData);
+    }
+    setAddEditVariableModalState({ isOpen: false });
+  };
+
+  const handleOpenConfirmVariableDelete = (variableId: string, variableName: string) => {
+    setConfirmVariableDeleteModalState({ isOpen: true, variableId, variableName });
+  };
+
+  const handleConfirmVariableDelete = () => {
+    if (confirmVariableDeleteModalState.variableId) {
+      removeVariable(confirmVariableDeleteModalState.variableId);
+    }
+    setConfirmVariableDeleteModalState({ isOpen: false, variableId: null, variableName: undefined });
   };
 
   return (
@@ -205,6 +249,9 @@ export default function Home() {
         onOpenEditTool={handleOpenEditTool}
         onOpenEditSubOption={handleOpenEditSubOption}
         onOpenConfirmSubOptionDelete={handleOpenConfirmSubOptionDelete}
+        onOpenAddVariable={handleOpenAddVariable}
+        onOpenEditVariable={handleOpenEditVariable}
+        onOpenConfirmVariableDelete={handleOpenConfirmVariableDelete}
       />
 
       <AnimatePresence>
@@ -257,6 +304,21 @@ export default function Home() {
             onConfirm={handleConfirmSubOptionDelete} 
             message={`Tem certeza que deseja deletar a sub-opção "${confirmSubOptionDeleteModalState.subOptionName || 'esta sub-opção'}"?`} 
             title="Confirmar Exclusão de Sub-Opção"
+          />
+        )}
+        {addEditVariableModalState.isOpen && (
+          <AddEditVariableModal
+            onClose={() => setAddEditVariableModalState({ isOpen: false })}
+            onSave={handleSaveVariable}
+            existingVariable={addEditVariableModalState.variable}
+          />
+        )}
+        {confirmVariableDeleteModalState.isOpen && (
+          <ConfirmationModal
+            onCancel={() => setConfirmVariableDeleteModalState({ isOpen: false, variableId: null, variableName: undefined })}
+            onConfirm={handleConfirmVariableDelete}
+            message={`Tem certeza que deseja deletar a variável "${confirmVariableDeleteModalState.variableName || 'esta variável'}"? Esta ação não pode ser desfeita.`}
+            title="Confirmar Exclusão de Variável"
           />
         )}
       </AnimatePresence>

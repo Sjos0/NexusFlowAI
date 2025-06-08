@@ -3,20 +3,18 @@
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { ToolColumn } from './ToolColumn';
-import { ToolCard } from './ToolCard';
-import { X, Zap, Target, ShieldCheck, Database } from 'lucide-react'; // Added Database
+import { VariableColumn } from './VariableColumn';
+import { X, Zap, Target, ShieldCheck, Database } from 'lucide-react';
 import { useToolsStore } from '@/stores/useToolsStore';
-import type { ToolCategory, Tool, SubOption, Variable } from '@/lib/types'; // Added Variable
+import type { ToolCategory, Tool, SubOption, Variable } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Button } from '@/components/ui/button'; // For potential "Add Variable" button
 
 const categoryColors: Record<ToolCategory, string> = {
   triggers: 'hsl(var(--destructive))',
   actions: 'hsl(var(--primary))',
-  constraints: 'hsl(145 70% 40%)', // A distinct green
-  variables: 'hsl(45 90% 45%)' // yellow-600 equivalent (hsl(45, 90%, 45%) is a vibrant yellow)
+  constraints: 'hsl(145 70% 40%)', 
+  variables: 'hsl(45 90% 50%)' // A distinct yellow, e.g., yellow-500
 };
-
 
 interface KnowledgeBasePanelProps {
   isOpen: boolean;
@@ -28,7 +26,9 @@ interface KnowledgeBasePanelProps {
   onOpenEditTool: (category: ToolCategory, tool: Tool) => void;
   onOpenEditSubOption: (category: ToolCategory, tool: Tool, subOption: SubOption) => void;
   onOpenConfirmSubOptionDelete: (category: ToolCategory, toolId: string, subOptionId: string, subOptionName: string) => void;
-  // Add props for variable handling if/when modals are created, e.g. onOpenAddVariable
+  onOpenAddVariable: () => void;
+  onOpenEditVariable: (variable: Variable) => void;
+  onOpenConfirmVariableDelete: (variableId: string, variableName: string) => void;
 }
 
 export function KnowledgeBasePanel({ 
@@ -40,11 +40,11 @@ export function KnowledgeBasePanel({
   onOpenManageTelas,
   onOpenEditTool,
   onOpenEditSubOption,
-  onOpenConfirmSubOptionDelete
+  onOpenConfirmSubOptionDelete,
+  onOpenAddVariable,
+  onOpenEditVariable,
+  onOpenConfirmVariableDelete
 }: KnowledgeBasePanelProps) {
-  // It's generally better to use the hook for reactivity if the panel might re-render
-  // due to other state changes, but getState() is fine if this component is relatively static
-  // or re-renders are controlled. For consistency with other parts of app, let's use selectors.
   const triggers = useToolsStore(state => state.triggers);
   const actions = useToolsStore(state => state.actions);
   const constraints = useToolsStore(state => state.constraints);
@@ -74,7 +74,7 @@ export function KnowledgeBasePanel({
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', stiffness: 300, damping: 30, duration: 0.3 }}
-            className="fixed top-0 right-0 h-full w-full md:max-w-3xl lg:max-w-4xl xl:max-w-5xl bg-card shadow-2xl z-50 flex flex-col" // Adjusted max-width for 4 columns
+            className="fixed top-0 right-0 h-full w-full md:max-w-3xl lg:max-w-4xl xl:max-w-5xl bg-card shadow-2xl z-50 flex flex-col"
           >
             <div className="flex justify-between items-center p-6 border-b border-border flex-shrink-0">
               <h2 className="font-headline text-2xl text-primary">Banco de Conhecimento da IA</h2>
@@ -91,57 +91,23 @@ export function KnowledgeBasePanel({
             </p>
             <ScrollArea className="flex-grow">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 p-6">
-                {allColumnsData.map(({ title, icon: Icon, category, data, color }) => (
+                {allColumnsData.map(({ title, icon: IconElement, category, data, color }) => (
                   category === 'variables' ? (
-                    // Placeholder for VariableColumn and VariableCard
-                    <div 
-                      key={category} 
-                      className="flex flex-col bg-card rounded-lg p-4 w-full h-full shadow-md border-border border-t-4"
-                      style={{ borderTopColor: color }}
-                    >
-                      <div className="flex items-center mb-4">
-                        <Icon className="h-6 w-6 mr-3" style={{ color: color }} />
-                        <h2 className="font-headline text-xl font-semibold" style={{ color: color }}>{title}</h2>
-                      </div>
-                      <div className="flex-grow overflow-y-auto space-y-3 pr-1 -mr-1">
-                        {(data as Variable[]).length === 0 && (
-                          <motion.p 
-                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            className="text-sm text-muted-foreground text-center py-4"
-                          >
-                            Sem {title.toLowerCase()} definidas.
-                          </motion.p>
-                        )}
-                        <AnimatePresence>
-                        {(data as Variable[]).map((variable) => (
-                          <motion.div 
-                            key={variable.id} 
-                            layout 
-                            initial={{ opacity: 0, y: 10 }} 
-                            animate={{ opacity: 1, y: 0 }} 
-                            exit={{ opacity: 0, x: -10, transition: { duration: 0.2 } }}
-                            transition={{ duration: 0.2 }}
-                            className="bg-muted/50 p-2 rounded-md" // Simple display for now
-                          >
-                            <p className="text-sm font-medium text-foreground">{variable.name}</p>
-                            <p className="text-xs text-muted-foreground truncate">{variable.description}</p>
-                          </motion.div>
-                        ))}
-                        </AnimatePresence>
-                      </div>
-                       <Button 
-                        onClick={() => { /* Placeholder for onOpenAddVariable(category) */ alert('Adicionar variável em breve!'); }}
-                        className="mt-4 w-full font-bold"
-                        style={{ backgroundColor: color }}
-                      >
-                        Adicionar Variável
-                      </Button>
-                    </div>
+                    <VariableColumn
+                      key={category}
+                      title={title}
+                      icon={IconElement}
+                      accentColor={color}
+                      variables={data as Variable[]}
+                      onAdd={onOpenAddVariable}
+                      onEdit={onOpenEditVariable}
+                      onDelete={onOpenConfirmVariableDelete}
+                    />
                   ) : (
                     <ToolColumn 
                       key={category} 
                       title={title} 
-                      icon={Icon} 
+                      icon={IconElement} 
                       onAdd={() => onOpenAddTool(category)} 
                       accentColor={color}
                     >

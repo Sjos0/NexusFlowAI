@@ -1,10 +1,8 @@
-
 // src/app/api/generate-plan/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { ai } from '@/ai/genkit';
 import type { Message } from 'genkit/ai';
-import type { Tool, ChatMessage, GeneratedPlan } from '@/lib/types';
-// Removed: import '../../../../genkit.config'; 
+import type { Tool, ChatMessage, GeneratedPlan, Variable } from '@/lib/types';
 
 const formatTools = (tools: Tool[]): string => {
   if (!tools || tools.length === 0) return 'Nenhum';
@@ -17,26 +15,34 @@ const formatTools = (tools: Tool[]): string => {
   }).join(' | ');
 };
 
+const formatVariables = (variables: Variable[]): string => {
+  if (!variables || variables.length === 0) return 'Nenhuma';
+  return variables.map(v => `${v.name} (Tipo: ${v.type}${v.isSecure ? ', Segura' : ''}${v.description ? `, Desc: ${v.description}` : ''})`).join('; ');
+};
+
 export async function POST(req: NextRequest) {
   try {
-    const { messages, tools } = await req.json() as { messages: ChatMessage[], tools: { triggers: Tool[], actions: Tool[], constraints: Tool[] } };
+    const { messages, tools } = await req.json() as { messages: ChatMessage[], tools: { triggers: Tool[], actions: Tool[], constraints: Tool[], variables: Variable[] } };
 
     if (!messages || messages.length === 0) {
       return NextResponse.json({ error: "Nenhuma mensagem fornecida." }, { status: 400 });
     }
+    
+    const availableToolsAndVariables = `Gatilhos Disponíveis: ${formatTools(tools.triggers)}. Ações Disponíveis: ${formatTools(tools.actions)}. Restrições Disponíveis: ${formatTools(tools.constraints)}. Variáveis Disponíveis: ${formatVariables(tools.variables)}.`;
 
-    const availableTools = `Gatilhos Disponíveis: ${formatTools(tools.triggers)}. Ações Disponíveis: ${formatTools(tools.actions)}. Restrições Disponíveis: ${formatTools(tools.constraints)}.`;
-
-    const masterPrompt = `Você é Nexus, um arquiteto de automação criativo e um co-piloto especialista em MacroDroid. Sua tarefa é manter uma conversa útil e didática com o usuário, ajudando-o a construir a melhor automação possível. Você pode usar múltiplos gatilhos, ações e restrições. Lembre-se do histórico da conversa para refinar os planos. Sua resposta DEVE ser um objeto JSON VÁLIDO no formato que você já conhece (macroName, steps: [{type, toolName, chosenSubOptions, detailedSteps}]). Em "detailedSteps", use Markdown. Se o pedido for impossível, o JSON DEVE ter "macroName": "Plano Impossível" e um único objeto no array "steps" com "type": "AÇÃO", "toolName": "Explicação", "chosenSubOptions": [], e "detailedSteps" explicando em Markdown por que não é possível e quais tipos de ferramentas ou sub-opções o usuário deveria adicionar para viabilizar o plano.`;
+    const masterPrompt = `Você é Nexus, um arquiteto de automação criativo e um co-piloto especialista em MacroDroid. Sua tarefa é manter uma conversa útil e didática com o usuário, ajudando-o a construir a melhor automação possível. Você pode usar múltiplos gatilhos, ações e restrições. Lembre-se do histórico da conversa para refinar os planos. Sua resposta DEVE ser um objeto JSON VÁLIDO no formato que você já conhece (macroName, steps: [{type, toolName, chosenSubOptions, detailedSteps}]). Em "detailedSteps", use Markdown.
+    
+    **REGRAS CRÍTICAS:**
+    - Utilize as "Variáveis Disponíveis" para tornar as automações dinâmicas. Por exemplo, se uma ação pode usar uma variável, mostre como no passo a passo (ex: 'No campo de texto, insira o valor da variável {nome_da_variavel}').
+    - Respeite o tipo de cada variável. Não tente usar uma variável Booleana onde um texto é esperado.
+    - Se o pedido for impossível, o JSON DEVE ter "macroName": "Plano Impossível" e um único objeto no array "steps" com "type": "AÇÃO", "toolName": "Explicação", "chosenSubOptions": [], e "detailedSteps" explicando em Markdown por que não é possível e quais tipos de ferramentas, sub-opções ou variáveis o usuário deveria adicionar para viabilizar o plano.`;
 
     const genkitHistory: Message[] = messages.slice(0, -1).map((msg: ChatMessage): Message => {
       if (msg.role === 'user') {
         return { role: msg.role, content: [{ text: msg.content as string }] };
       } else {
-        // Model content is a GeneratedPlan object
         const planContent = msg.content as GeneratedPlan;
-        // For history, send a simplified summary of the AI's previous plan
-        return { role: msg.role, content: [{ text: `Eu gerei um plano chamado "${planContent.macroName}". Detalhes do plano omitidos do histórico para brevidade.` }] };
+        return { role: msg.role, content: [{ text: `Eu gerei um plano chamado "${planContent.macroName}". Detalhes omitidos.` }] };
       }
     });
     
@@ -48,7 +54,7 @@ export async function POST(req: NextRequest) {
 
     const llmResponse = await ai.generate({
       model: 'googleai/gemini-2.5-flash-preview-05-20',
-      system: `${masterPrompt}\n\nFerramentas disponíveis para este turno: ${availableTools}`, 
+      system: `${masterPrompt}\n\nDisponível para este turno: ${availableToolsAndVariables}`, 
       history: genkitHistory, 
       prompt: currentPromptText, 
       config: { temperature: 0.6 },
@@ -76,7 +82,7 @@ export async function POST(req: NextRequest) {
         try {
           plan = JSON.parse(jsonMatch[0]);
         } catch (nestedParseError) {
-          console.error("Erro ao parsear JSON extraído:", nestedParseError);
+          console.error("Erro ao parsear JSON extraído:", nestedParseError, "Conteúdo:", jsonMatch[0]);
           throw new Error('A IA retornou uma resposta em formato JSON inválido, mesmo após tentativa de extração.');
         }
       } else {
