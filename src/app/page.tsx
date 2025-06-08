@@ -134,7 +134,8 @@ export default function Home() {
           </Button>
         </header>
         
-        <div className="flex-grow flex justify-center items-stretch"> 
+        {/* MODIFICATION: The main content area now grows and provides a base for the chat */}
+        <div className="flex-grow flex justify-center items-stretch py-4"> 
           <AIPromptArea />
         </div>
       </main>
