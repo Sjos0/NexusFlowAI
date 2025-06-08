@@ -9,7 +9,7 @@ export interface Variable {
   name: string;
   type: VariableType;
   isSecure: boolean;
-  description?: string;
+  description?: string; // Optional description for user notes
 }
 
 export interface Tela {
@@ -39,10 +39,4 @@ export interface PlanStep {
 export interface GeneratedPlan {
   macroName: string;
   steps: PlanStep[];
-}
-
-export interface ChatMessage {
-  id: string;
-  role: 'user' | 'model';
-  content: string | GeneratedPlan;
 }
