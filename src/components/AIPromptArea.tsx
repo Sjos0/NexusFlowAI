@@ -9,47 +9,59 @@ import type { GeneratedPlan, ChatMessage, Tool, ToolCategory } from '@/lib/types
 import { AutomationPlanView } from './AutomationPlanView';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { SuggestionTicker } from './SuggestionTicker'; // Import the new component
-import { useHasMounted } from '@/hooks/useHasMounted'; // To prevent hydration issues with window
+import { SuggestionTicker, Suggestion } from './SuggestionTicker'; // Import Suggestion type
+import { useHasMounted } from '@/hooks/useHasMounted';
 
 export function AIPromptArea() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isGeneratingPlan, setIsGeneratingPlan] = useState(false); // Renamed for clarity
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+  
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const hasMounted = useHasMounted();
 
-  // Use a selector to get specific parts of the store
-  // This prevents re-renders if other parts of the store change
+  // Select specific parts of the store to prevent unnecessary re-renders
   const currentTools = useToolsStore(state => ({
     triggers: state.triggers,
     actions: state.actions,
     constraints: state.constraints,
   }));
-
-  // Trigger suggestion loading when tools change and component has mounted
-  useEffect(() => {
-    if (!hasMounted) return;
-
-    // Check if there are actual tools to avoid empty dispatches
-    const hasTriggers = currentTools.triggers && currentTools.triggers.length > 0;
-    const hasActions = currentTools.actions && currentTools.actions.length > 0;
-    // const hasConstraints = currentTools.constraints && currentTools.constraints.length > 0; // Optional: include constraints if they influence suggestions
-
-    if (hasTriggers || hasActions /* || hasConstraints */) {
-      // Dispatch event with only the necessary tool data
-      const event = new CustomEvent('load-suggestions', { 
-        detail: {
-          triggers: currentTools.triggers,
-          actions: currentTools.actions,
-          constraints: currentTools.constraints,
-        } 
-      });
-      window.dispatchEvent(event);
+  
+  const fetchSuggestions = useCallback(async () => {
+    if (!hasMounted || (currentTools.triggers.length === 0 && currentTools.actions.length === 0)) {
+        setSuggestions([]); // Clear suggestions if no relevant tools
+        return;
     }
-  }, [currentTools.triggers, currentTools.actions, currentTools.constraints, hasMounted]);
+    
+    setIsLoadingSuggestions(true);
+    try {
+      const res = await fetch('/api/generate-suggestions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tools: currentTools }), // Pass currentTools
+      });
+      const data = await res.json();
+      if (res.ok && Array.isArray(data)) {
+        setSuggestions(data);
+      } else {
+        console.error("Failed to load suggestions, API returned an error or invalid data:", data);
+        setSuggestions([]);
+      }
+    } catch (error) {
+      console.error("Exception while fetching suggestions:", error);
+      setSuggestions([]);
+    } finally {
+      setIsLoadingSuggestions(false);
+    }
+  }, [currentTools, hasMounted]); // Add hasMounted to dependency array
 
+  useEffect(() => {
+    // Fetch suggestions when tools change (and component is mounted)
+    fetchSuggestions();
+  }, [fetchSuggestions]); // fetchSuggestions itself depends on currentTools and hasMounted
 
   useEffect(() => {
     if (chatContainerRef.current) {
@@ -65,12 +77,12 @@ export function AIPromptArea() {
 
   const handleUseSuggestion = (prompt: string) => {
     setInput(prompt);
-    inputRef.current?.focus(); // Focus input after using suggestion
+    inputRef.current?.focus();
   };
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!input.trim() || isLoading) return;
+    if (!input.trim() || isGeneratingPlan) return;
 
     const newUserMessage: ChatMessage = {
       id: crypto.randomUUID(),
@@ -81,7 +93,7 @@ export function AIPromptArea() {
     const updatedMessages = [...messages, newUserMessage];
     setMessages(updatedMessages);
     setInput('');
-    setIsLoading(true);
+    setIsGeneratingPlan(true);
 
     try {
       const res = await fetch('/api/generate-plan', {
@@ -128,7 +140,7 @@ export function AIPromptArea() {
       };
       setMessages(prev => [...prev, errorAiMessage]);
     } finally {
-      setIsLoading(false);
+      setIsGeneratingPlan(false);
       inputRef.current?.focus();
     }
   };
@@ -175,7 +187,7 @@ export function AIPromptArea() {
             </motion.div>
           ))}
         </AnimatePresence>
-        {isLoading && messages.length > 0 && messages[messages.length-1].role === 'user' && (
+        {isGeneratingPlan && messages.length > 0 && messages[messages.length-1].role === 'user' && (
             <motion.div 
                 key="loading-indicator"
                 layout
@@ -194,9 +206,13 @@ export function AIPromptArea() {
 
       {/* Suggestion & Input Area */}
       <div className="flex-shrink-0 pt-4 border-t border-border">
-        {hasMounted && <SuggestionTicker onUseSuggestion={handleUseSuggestion} />}
+        <SuggestionTicker 
+            suggestions={suggestions} 
+            onUseSuggestion={handleUseSuggestion}
+            isLoading={isLoadingSuggestions} 
+        />
         <form onSubmit={handleSubmit}>
-          <div className="bg-card rounded-lg p-2 shadow-xl flex items-end border border-border mt-2"> {/* Added mt-2 for spacing after ticker */}
+          <div className="bg-card rounded-lg p-2 shadow-xl flex items-end border border-border mt-2">
             <TextareaAutosize
               ref={inputRef}
               value={input}
@@ -206,19 +222,19 @@ export function AIPromptArea() {
               maxRows={6}
               placeholder="Converse com o Nexus ou descreva sua automação..."
               className="w-full bg-transparent text-foreground resize-none p-3 pr-12 focus:outline-none placeholder:text-muted-foreground text-sm"
-              disabled={isLoading}
+              disabled={isGeneratingPlan}
               aria-label="Mensagem para Nexus"
             />
             <button
               type="submit"
-              disabled={isLoading || !input.trim()}
+              disabled={isGeneratingPlan || !input.trim()}
               className={cn(
                 "flex items-center justify-center h-10 w-10 rounded-md hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed ml-2 flex-shrink-0",
                 "bg-gradient-to-r from-accent to-accent-end text-accent-foreground"
               )}
               aria-label="Enviar"
             >
-              {isLoading ? (
+              {isGeneratingPlan ? (
                 <div className="w-5 h-5 border-2 border-accent-foreground border-t-transparent rounded-full animate-spin"></div>
               ) : (
                 <CornerDownLeft size={20} />
