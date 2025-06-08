@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Plus, X } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { IconButton } from './IconButton'; // Import new component
 
 interface AddToolModalProps {
   onClose: () => void;
@@ -107,9 +108,14 @@ export function AddToolModal({ onClose, onAdd, categoryTitle }: AddToolModalProp
                   }
                 }}
               />
-              <Button type="button" onClick={handleAddOption} variant="outline" size="icon" aria-label="Adicionar sub-opção">
+              <IconButton 
+                type="button" 
+                onClick={handleAddOption} 
+                ariaLabel="Adicionar sub-opção"
+                className="h-10 w-10 inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground" // Mimics Button variant="outline" size="icon"
+              >
                 <Plus className="h-4 w-4" />
-              </Button>
+              </IconButton>
             </div>
             
             {subOptions.length > 0 && (
@@ -117,16 +123,14 @@ export function AddToolModal({ onClose, onAdd, categoryTitle }: AddToolModalProp
                 {subOptions.map((option, index) => (
                   <div key={index} className="flex items-center justify-between bg-muted p-2 rounded-md">
                     <span className="text-sm text-muted-foreground">{option}</span>
-                    <Button 
+                    <IconButton 
                       type="button" 
                       onClick={() => handleRemoveOption(index)} 
-                      variant="ghost" 
-                      size="icon" 
-                      className="text-muted-foreground hover:text-destructive h-6 w-6"
-                      aria-label={`Remover opção ${option}`}
+                      ariaLabel={`Remover opção ${option}`}
+                      className="text-muted-foreground hover:text-destructive h-6 w-6" // Mimics Button variant="ghost" size="icon" classes
                     >
                       <X size={16} />
-                    </Button>
+                    </IconButton>
                   </div>
                 ))}
               </div>

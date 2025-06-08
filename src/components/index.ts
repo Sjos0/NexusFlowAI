@@ -13,3 +13,4 @@ export * from './ToolColumn';
 export * from './AddEditVariableModal';
 export * from './VariableCard';
 export * from './VariableColumn';
+export * from './IconButton'; // Added export

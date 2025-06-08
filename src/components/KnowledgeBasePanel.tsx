@@ -8,7 +8,8 @@ import { X, Zap, Target, ShieldCheck, Database } from 'lucide-react';
 import { useToolsStore } from '@/stores/useToolsStore';
 import type { ToolCategory, Tool, SubOption, Variable } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ToolCard } from '@/components'; // Added import for ToolCard
+import { ToolCard } from '@/components';
+import { IconButton } from './IconButton'; // Import new component
 
 const categoryColors: Record<ToolCategory, string> = {
   triggers: 'hsl(var(--destructive))', // Typically red
@@ -79,13 +80,13 @@ export function KnowledgeBasePanel({
           >
             <div className="flex justify-between items-center p-6 border-b border-border flex-shrink-0">
               <h2 className="font-headline text-2xl text-primary">Banco de Conhecimento da IA</h2>
-              <button 
+              <IconButton 
                 onClick={onClose} 
-                className="text-muted-foreground hover:text-primary p-1 rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
-                aria-label="Fechar painel de conhecimento"
+                ariaLabel="Fechar painel de conhecimento"
+                className="text-muted-foreground hover:text-primary p-1 rounded-md" // focus:outline-none focus:ring-2 focus:ring-ring removed
               >
                 <X size={24} />
-              </button>
+              </IconButton>
             </div>
             <p className="text-muted-foreground px-6 pt-4 pb-2 text-sm flex-shrink-0">
               A IA usará todas as ferramentas, variáveis e sub-opções listadas aqui para criar seus planos de automação.

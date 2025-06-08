@@ -9,6 +9,7 @@ import TextareaAutosize from 'react-textarea-autosize';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { IconButton } from './IconButton'; // Import new component
 
 interface ManageTelasModalProps {
   onClose: () => void;
@@ -83,15 +84,13 @@ export function ManageTelasModal({ onClose, subOption, onSave }: ManageTelasModa
             {telas.map(tela => (
               <div key={tela.id} className="bg-muted p-3 rounded-md flex justify-between items-start text-sm group">
                 <p className="text-muted-foreground whitespace-pre-wrap flex-grow mr-2">{tela.content}</p>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
+                <IconButton 
                   onClick={() => onRemoveTela(tela.id)} 
+                  ariaLabel="Remover tela"
                   className="text-muted-foreground hover:text-destructive h-6 w-6 flex-shrink-0 opacity-50 group-hover:opacity-100"
-                  aria-label="Remover tela"
                 >
                   <X size={16} />
-                </Button>
+                </IconButton>
               </div>
             ))}
           </div>

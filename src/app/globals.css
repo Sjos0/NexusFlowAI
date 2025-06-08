@@ -68,3 +68,11 @@
   padding: 1rem;
   border-radius: 0.5rem; /* Matches --radius */
 }
+
+/* Remove the default blue outline on focused elements */
+*:focus {
+  outline: none;
+}
+
+/* For accessibility, we can add a custom focus ring for keyboard navigation,
+   but we'll keep it simple for now to meet the user's request. */
