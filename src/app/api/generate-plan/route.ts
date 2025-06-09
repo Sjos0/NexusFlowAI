@@ -1,19 +1,19 @@
 // src/app/api/generate-plan/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { ai } from '@/ai/genkit'; // Use the project's configured ai instance
-import type { Tool, Variable, PlanStep, GeneratedPlan } from '@/lib/types'; // Ensure all necessary types are here
+import type { Tool, Variable, PlanStep, GeneratedPlan } from '@/lib/types'; 
 import { WIKI_CONTEXT } from '@/lib/ai/wikiContext';
 
 const formatTools = (tools: Tool[]): string => {
   if (!tools || tools.length === 0) return 'Nenhuma';
   return tools.map(t => {
     const subOptionsString = t.subOptions.map(so => {
-      const telasString = so.telas.map(tela => tela.content).join('; ');
-      // Changed "Contexto Telas:" to "Contexto:"
-      return `${so.name}${telasString ? ` (Contexto: ${telasString})` : ''}`; 
+      // CRITICAL: Ensure telas content is properly formatted and prefixed
+      const telasString = so.telas.map(tela => tela.content).join(' | INSTRUÇÃO ADICIONAL: ');
+      return `${so.name}${telasString ? ` (REGRAS PARA ESTA OPÇÃO: ${telasString})` : ''}`;
     }).join(', ');
-    return `${t.name}${subOptionsString ? ` (Opções: ${subOptionsString})` : ''}`;
-  }).join(' | ');
+    return `${t.name}${subOptionsString ? ` (Opções e suas regras: ${subOptionsString})` : ''}`;
+  }).join('; ');
 };
 
 const formatVariables = (variables: Variable[]): string => {
@@ -26,7 +26,6 @@ export async function POST(req: NextRequest) {
     const { prompt: userQuery, tools } = await req.json() as { prompt: string; tools: { triggers: Tool[], actions: Tool[], constraints: Tool[], variables: Variable[] } };
 
     if (!userQuery) {
-      // Updated error message
       return NextResponse.json({ error: 'O prompt é obrigatório.' }, { status: 400 });
     }
     if (!tools) {
@@ -51,7 +50,8 @@ Seu objetivo é analisar o "PEDIDO DO USUÁRIO" e criar UM ÚNICO plano de autom
 1. Use o CONHECIMENTO BASE como sua fonte da verdade.
 2. Construa o plano usando APENAS as ferramentas do KNOWLEDGE BASE DO USUÁRIO.
 3. Se o usuário não tiver as ferramentas necessárias, use seu conhecimento base para sugerir quais ferramentas ele deveria criar (ex: "Para fazer isso, você precisará criar uma Ação do tipo 'Requisição HTTP' no seu Knowledge Base.").
-4. Sua resposta DEVE ser um objeto JSON VÁLIDO e NADA MAIS, no formato { "macroName": string, "steps": [{ "type": "GATILHO" | "AÇÃO" | "RESTRIÇÃO", "toolName": string, "chosenSubOptions": string[], "detailedSteps": "string em formato Markdown" }] }. Se o pedido for impossível, o JSON DEVE ter "macroName": "Plano Impossível" e um único objeto no array "steps" com "type": "AÇÃO", "toolName": "Explicação", "chosenSubOptions": [], e "detailedSteps" explicando em Markdown por que não é possível e quais tipos de ferramentas, sub-opções ou variáveis o usuário deveria adicionar para viabilizar o plano.
+4. **PRIORIDADE MÁXIMA:** As sub-opções podem ter "REGRAS PARA ESTA OPÇÃO". Você DEVE seguir essas regras específicas ao usar aquela sub-opção. Elas são o contexto mais importante fornecido pelo usuário.
+5. Sua resposta DEVE ser um objeto JSON VÁLIDO e NADA MAIS, no formato { "macroName": string, "steps": [{ "type": "GATILHO" | "AÇÃO" | "RESTRIÇÃO", "toolName": string, "chosenSubOptions": string[], "detailedSteps": "string em formato Markdown" }] }. Se o pedido for impossível, o JSON DEVE ter "macroName": "Plano Impossível" e um único objeto no array "steps" com "type": "AÇÃO", "toolName": "Explicação", "chosenSubOptions": [], e "detailedSteps" explicando em Markdown por que não é possível e quais tipos de ferramentas, sub-opções ou variáveis o usuário deveria adicionar para viabilizar o plano.
 
 --- CONHECIMENTO BASE ---
 ${WIKI_CONTEXT}
@@ -66,13 +66,13 @@ ${userKnowledgeBase}
 Gere o objeto JSON agora.
 `;
     
-    const llmResponse = await ai.generate({ // Use the ai instance
-      model: 'googleai/gemini-2.5-flash-preview-05-20', // Specify model as a string
+    const llmResponse = await ai.generate({ 
+      model: 'googleai/gemini-2.5-flash-preview-05-20', 
       prompt: finalPrompt,
       config: { temperature: 0.4 },
     });
 
-    const responseTextRaw = llmResponse.text; // Genkit 1.x syntax
+    const responseTextRaw = llmResponse.text; 
     if (!responseTextRaw) {
         throw new Error('LLM returned an empty response.');
     }
@@ -83,7 +83,7 @@ Gere o objeto JSON agora.
       plan = JSON.parse(responseText);
     } catch (parseError) {
       console.error("Erro ao parsear JSON da IA:", parseError, "Texto recebido:", responseText);
-      const jsonMatch = responseText.match(/{[\s\S]*}/); // Try to extract JSON from a larger string
+      const jsonMatch = responseText.match(/{[\s\S]*}/); 
       if (jsonMatch && jsonMatch[0]) {
         try {
           plan = JSON.parse(jsonMatch[0]);
@@ -96,7 +96,6 @@ Gere o objeto JSON agora.
       }
     }
     
-    // Basic validation of the plan structure
     if (!plan.macroName || !Array.isArray(plan.steps)) {
         console.error("Estrutura do plano inválida recebida da IA:", plan);
         throw new Error('A IA retornou um plano com formato JSON esperado, mas com campos ausentes ou tipos incorretos.');
@@ -119,7 +118,6 @@ Gere o objeto JSON agora.
         errorMessage = error;
     }
     
-    // Log the AI's raw response text if available, especially for parsing errors
     if (error.message && error.message.toLowerCase().includes('json') && error.cause && error.cause.candidates) {
         try {
             // @ts-ignore
@@ -127,7 +125,7 @@ Gere o objeto JSON agora.
         } catch (logError) {
             console.error("Erro ao tentar logar a resposta da IA:", logError);
         }
-    } else if (error.responseText) { // Fallback for other types of errors that might carry the text
+    } else if (error.responseText) { 
       console.error("Resposta textual da IA que pode ter causado o erro:", error.responseText);
     }
     
