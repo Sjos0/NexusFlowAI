@@ -1,3 +1,4 @@
+
 // src/components/KnowledgeBasePanel.tsx
 'use client';
 
@@ -10,8 +11,7 @@ import type { ToolCategory, Tool, SubOption, Variable } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ToolCard } from '@/components';
 import { IconButton } from './IconButton';
-import { Button } from '@/components/ui/button';
-
+// Removed ShadCN Button import as we are using raw buttons for import/export
 
 const categoryColors: Record<ToolCategory, string> = {
   triggers: 'hsl(var(--destructive))', 
@@ -105,19 +105,27 @@ export function KnowledgeBasePanel({
                 <p className="text-muted-foreground mb-4">
                 A IA usará todas as ferramentas, variáveis e sub-opções listadas aqui para criar seus planos de automação.
                 </p>
-                <div className="flex space-x-3">
-                    <Button onClick={onExport} variant="outline" className="flex-1">
-                    <Download size={16} className="mr-2" /> Exportar Conhecimento
-                    </Button>
-                    <Button onClick={onImport} variant="outline" className="flex-1">
-                    <Upload size={16} className="mr-2" /> Importar Conhecimento
-                    </Button>
+                <div className="flex space-x-3 mb-6 -mt-2">
+                  <button 
+                    onClick={onExport} 
+                    className="flex-1 flex items-center justify-center space-x-2 bg-muted text-muted-foreground px-3 py-2 rounded-lg text-sm hover:text-primary hover:bg-accent/20 transition-all"
+                  >
+                    <Download size={16} />
+                    <span>Exportar</span>
+                  </button>
+                  <button 
+                    onClick={onImport} 
+                    className="flex-1 flex items-center justify-center space-x-2 bg-muted text-muted-foreground px-3 py-2 rounded-lg text-sm hover:text-primary hover:bg-accent/20 transition-all"
+                  >
+                    <Upload size={16} />
+                    <span>Importar</span>
+                  </button>
                 </div>
             </div>
 
 
             <ScrollArea className="flex-grow">
-              <div className="p-6">
+              <div className="p-6 pt-0"> {/* Adjusted padding to pt-0 */}
                 <div className="flex flex-col lg:flex-row lg:space-x-6 space-y-6 lg:space-y-0">
                   
                   {triggersData && (

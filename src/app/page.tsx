@@ -1,8 +1,10 @@
+
 // src/app/page.tsx
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import { AnimatePresence } from 'framer-motion';
+import toast from 'react-hot-toast';
 // Component Imports
 import { 
   AddToolModal, 
@@ -22,19 +24,24 @@ import { BotMessageSquare } from 'lucide-react';
 import { exportKnowledgeBase } from '@/lib/kbManager';
 
 export default function Home() {
+  // IMPORTANT: We now subscribe to the entire state to ensure re-renders
+  const store = useToolsStore();
   const { 
-    hydrate, 
-    updateTool, 
-    removeTool, 
+    overwriteState, 
+    triggers, 
+    actions, 
+    constraints, 
+    variables,
     addTool,
+    removeTool,
+    updateTool,
     addVariable,
     removeVariable,
     updateVariable,
-    overwriteState, // New function from store
-    ...kbState // Contains triggers, actions, constraints, variables
-  } = useToolsStore();
-
-  const importFileRef = useRef<HTMLInputElement>(null); // Ref for hidden file input
+    hydrate 
+  } = store;
+  
+  const importFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { 
     hydrate(); 
@@ -201,12 +208,13 @@ export default function Home() {
   // Import/Export Handlers
   const handleExport = () => {
     const dataToExport = {
-      triggers: kbState.triggers,
-      actions: kbState.actions,
-      constraints: kbState.constraints,
-      variables: kbState.variables,
+      triggers: triggers,
+      actions: actions,
+      constraints: constraints,
+      variables: variables,
     };
     exportKnowledgeBase(dataToExport);
+    toast.success('Arquivos de conhecimento exportados!');
   };
 
   const handleImportClick = () => {
@@ -218,25 +226,26 @@ export default function Home() {
     if (!file) return;
 
     if (!file.name.endsWith('.nexus')) {
-      alert('Erro: Apenas arquivos .nexus podem ser importados.');
+      toast.error('Erro: Apenas arquivos .nexus podem ser importados.');
       if (event.target) event.target.value = ''; // Reset input
       return;
     }
 
     if (!window.confirm('Atenção: Importar um novo arquivo irá substituir todo o seu Banco de Conhecimento atual. Deseja continuar?')) {
+      toast.dismiss(); 
       if (event.target) event.target.value = ''; // Reset input
       return;
     }
+
+    const toastId = toast.loading('Processando arquivo...');
 
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
         const encodedData = e.target?.result as string;
-        // Decode Base64 to binary string, then binary string to UTF-8 string, then parse JSON
         const jsonString = decodeURIComponent(escape(atob(encodedData)));
         const importedData = JSON.parse(jsonString);
         
-        // Basic validation for top-level keys
         if (
           typeof importedData === 'object' &&
           importedData !== null &&
@@ -245,21 +254,22 @@ export default function Home() {
           Array.isArray(importedData.constraints) &&
           Array.isArray(importedData.variables)
         ) {
-          overwriteState(importedData); // This function in store should handle deeper validation/defaults
-          alert('Banco de Conhecimento importado com sucesso!');
+          overwriteState(importedData);
+          toast.success('Banco de Conhecimento importado com sucesso!', { id: toastId });
         } else {
-          throw new Error('Estrutura de dados do arquivo .nexus inválida.');
+          throw new Error('O arquivo .nexus não contém a estrutura de dados esperada.');
         }
 
       } catch (err) {
         console.error("Erro ao importar arquivo:", err);
-        alert('Erro: O arquivo está corrompido ou não é um arquivo .nexus válido.');
+        const errorMessage = err instanceof Error ? err.message : 'O arquivo está corrompido ou não é um arquivo .nexus válido.';
+        toast.error(`Erro: ${errorMessage}`, { id: toastId });
       } finally {
         if (event.target) event.target.value = ''; // Reset input in all cases after processing
       }
     };
     reader.onerror = () => {
-        alert('Erro ao ler o arquivo.');
+        toast.error('Erro ao ler o arquivo.', { id: toastId });
         if (event.target) event.target.value = ''; // Reset input
     };
     reader.readAsText(file);
@@ -390,3 +400,4 @@ export default function Home() {
     </>
   );
 }
+
