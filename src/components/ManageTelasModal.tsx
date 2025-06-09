@@ -3,93 +3,113 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Save, Check } from 'lucide-react'; // Edit2, X are used by TelaCard
-import { Tela, SubOption } from '@/lib/types';
+import { Plus, Check, Edit2, Trash2, Save } from 'lucide-react';
+import { Tela, SubOption, Tool, ToolCategory } from '@/lib/types';
+import { useToolsStore } from '@/stores/useToolsStore';
 import TextareaAutosize from 'react-textarea-autosize';
-import { TelaCard } from './TelaCard'; // Import the new component
+import { TelaCard } from './TelaCard';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-
 interface ManageTelasModalProps {
   onClose: () => void;
-  subOption: SubOption;
-  onSave: (updatedSubOption: SubOption) => void;
+  toolId: string;
+  category: ToolCategory; 
+  subOptionId: string;
 }
 
-export function ManageTelasModal({ onClose, subOption, onSave }: ManageTelasModalProps) {
-  const [telas, setTelas] = useState<Tela[]>([]);
+export function ManageTelasModal({ onClose, toolId, category, subOptionId }: ManageTelasModalProps) {
+  const { updateTool } = useToolsStore();
+  const tool = useToolsStore((state) => (state[category] as Tool[])?.find(t => t.id === toolId));
+  const subOption = tool?.subOptions.find(so => so.id === subOptionId);
+
   const [newTelaContent, setNewTelaContent] = useState('');
   const [editingContent, setEditingContent] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
   const newTelaTextareaRef = useRef<HTMLTextAreaElement>(null);
   const editTelaTextareaRef = useRef<HTMLTextAreaElement>(null);
 
-
   useEffect(() => {
-    setTelas(subOption.telas || []);
-    if (!editingId) {
-        newTelaTextareaRef.current?.focus();
-    }
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        if (editingId) {
-          handleCancelEditing();
+        if (confirmDeleteId) {
+          setConfirmDeleteId(null);
+        } else if (editingId) {
+          setEditingId(null);
+          setEditingContent('');
         } else {
           onClose();
         }
       }
     };
     document.addEventListener('keydown', handleEscape);
-    return () => {
-      document.removeEventListener('keydown', handleEscape);
-    };
-  }, [subOption, onClose, editingId]);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [onClose, editingId, confirmDeleteId]);
 
   useEffect(() => {
     if (editingId) {
-        editTelaTextareaRef.current?.focus();
-        editTelaTextareaRef.current?.select();
+      editTelaTextareaRef.current?.focus();
+      editTelaTextareaRef.current?.select();
+    } else if (!confirmDeleteId) { // Don't shift focus if confirm dialog is open
+        newTelaTextareaRef.current?.focus();
     }
-  }, [editingId]);
+  }, [editingId, confirmDeleteId]);
 
-  const handleStartEditing = (tela: Tela) => {
-    setEditingId(tela.id);
-    setEditingContent(tela.content);
+  if (!tool || !subOption) {
+    useEffect(() => {
+      onClose();
+    }, [onClose]);
+    return null;
+  }
+
+  const handleUpdateStoreWithNewSubOptions = (newSubOptionsForTool: SubOption[]) => {
+    if (category === 'variables') return; // Should not happen if called correctly
+    updateTool(category, toolId, { subOptions: newSubOptionsForTool });
   };
 
-  const handleCancelEditing = () => {
-    setEditingId(null);
-    setEditingContent('');
-    newTelaTextareaRef.current?.focus();
-  };
-
-  const handleSaveEdit = () => {
-    if (editingId === null || !editingContent.trim()) return;
-    const updatedTelas = telas.map(t =>
-      t.id === editingId ? { ...t, content: editingContent.trim() } : t
-    );
-    setTelas(updatedTelas);
-    handleCancelEditing(); 
-  };
-  
   const handleAddTela = () => {
-    if (newTelaContent.trim()) {
+    if (newTelaContent.trim() && tool) {
       const newTela: Tela = { id: crypto.randomUUID(), content: newTelaContent.trim() };
-      setTelas(prevTelas => [...prevTelas, newTela]);
+      const newSubOptionsForTool = tool.subOptions.map(so =>
+        so.id === subOptionId ? { ...so, telas: [...(so.telas || []), newTela] } : so
+      );
+      handleUpdateStoreWithNewSubOptions(newSubOptionsForTool);
       setNewTelaContent('');
       newTelaTextareaRef.current?.focus();
     }
   };
 
-  const handleRemoveTela = (telaId: string) => {
-    setTelas(prevTelas => prevTelas.filter(t => t.id !== telaId));
+  const handleSaveEdit = () => {
+    if (editingId === null || !tool || !editingContent.trim()) return;
+    const newSubOptionsForTool = tool.subOptions.map(so =>
+      so.id === subOptionId
+        ? {
+            ...so,
+            telas: (so.telas || []).map(t =>
+              t.id === editingId ? { ...t, content: editingContent.trim() } : t
+            ),
+          }
+        : so
+    );
+    handleUpdateStoreWithNewSubOptions(newSubOptionsForTool);
+    setEditingId(null);
+    setEditingContent('');
+    newTelaTextareaRef.current?.focus();
   };
-
-  const handleSaveAndClose = () => {
-    onSave({ ...subOption, telas });
-    onClose();
+  
+  const handleRemoveTelaConfirmed = () => {
+    if (confirmDeleteId === null || !tool) return;
+    const newSubOptionsForTool = tool.subOptions.map(so =>
+      so.id === subOptionId
+        ? { ...so, telas: (so.telas || []).filter(t => t.id !== confirmDeleteId) }
+        : so
+    );
+    handleUpdateStoreWithNewSubOptions(newSubOptionsForTool);
+    setConfirmDeleteId(null);
+    newTelaTextareaRef.current?.focus();
   };
 
   return (
@@ -109,7 +129,6 @@ export function ManageTelasModal({ onClose, subOption, onSave }: ManageTelasModa
         className="bg-card p-6 rounded-lg shadow-xl w-full max-w-2xl flex flex-col h-[85vh]"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Modal Header */}
         <div className="flex-shrink-0">
           <h2 className="font-headline text-xl mb-1 text-foreground">Gerenciar Contexto (Telas)</h2>
           <p className="text-muted-foreground mb-4 text-sm">
@@ -117,14 +136,14 @@ export function ManageTelasModal({ onClose, subOption, onSave }: ManageTelasModa
           </p>
         </div>
         
-        {/* SCROLLABLE AREA */}
         <ScrollArea className="flex-grow mb-4 pr-3 -mr-1 my-4">
           <div className="space-y-4">
-            {telas.length === 0 && <p className="text-center text-muted-foreground p-4 italic">Nenhuma tela de contexto adicionada.</p>}
-            {telas.map(tela => (
+            {(subOption.telas || []).length === 0 && (
+              <p className="text-center text-muted-foreground p-4 italic">Nenhuma tela de contexto adicionada.</p>
+            )}
+            {(subOption.telas || []).map(tela => (
               <div key={tela.id}>
                 {editingId === tela.id ? (
-                  // EDITING VIEW
                   <div className="bg-muted p-3 rounded-lg border border-primary space-y-2">
                     <Label htmlFor={`edit-tela-${tela.id}`} className="sr-only">Editar conteúdo da tela</Label>
                     <TextareaAutosize
@@ -136,18 +155,17 @@ export function ManageTelasModal({ onClose, subOption, onSave }: ManageTelasModa
                       minRows={2}
                     />
                     <div className="flex justify-end space-x-4 pt-1">
-                      <Button variant="ghost" size="sm" onClick={handleCancelEditing} className="text-xs text-muted-foreground hover:text-foreground">Cancelar</Button>
+                      <Button variant="ghost" size="sm" onClick={() => { setEditingId(null); setEditingContent(''); newTelaTextareaRef.current?.focus();}} className="text-xs">Cancelar</Button>
                       <Button size="sm" onClick={handleSaveEdit} className="text-xs" disabled={!editingContent.trim()}>
                         <Check size={14} className="mr-1.5"/>Salvar Alteração
                       </Button>
                     </div>
                   </div>
                 ) : (
-                  // DISPLAY VIEW using the new TelaCard component
                   <TelaCard
                     content={tela.content}
-                    onEdit={() => handleStartEditing(tela)}
-                    onRemove={() => handleRemoveTela(tela.id)}
+                    onEdit={() => { setEditingId(tela.id); setEditingContent(tela.content); }}
+                    onRemove={() => setConfirmDeleteId(tela.id)}
                   />
                 )}
               </div>
@@ -155,7 +173,6 @@ export function ManageTelasModal({ onClose, subOption, onSave }: ManageTelasModa
           </div>
         </ScrollArea>
 
-        {/* ADD NEW TELA AREA */}
         <div className="flex-shrink-0 space-y-3 border-t border-border pt-4">
           <Label htmlFor="newTelaContentManageModal" className="text-sm font-medium text-muted-foreground">Adicionar Nova Tela de Contexto</Label>
           <TextareaAutosize
@@ -181,10 +198,28 @@ export function ManageTelasModal({ onClose, subOption, onSave }: ManageTelasModa
         </div>
         
         <div className="flex-shrink-0 flex justify-end mt-6">
-          <Button type="button" onClick={handleSaveAndClose} size="lg">
-            <Save size={18} className="mr-2"/>SALVAR TUDO E FECHAR
+          <Button type="button" onClick={onClose} size="lg">
+            <Save size={18} className="mr-2"/>FECHAR
           </Button>
         </div>
+        
+        {confirmDeleteId && (
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[60]">
+            <motion.div 
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className="bg-card p-6 rounded-lg shadow-xl w-full max-w-sm"
+            >
+              <h3 className="text-lg font-medium text-foreground mb-3">Confirmar Exclusão</h3>
+              <p className="text-sm text-muted-foreground mb-5">Tem certeza que deseja deletar esta tela de contexto? Esta ação não pode ser desfeita.</p>
+              <div className="flex justify-end space-x-3">
+                <Button variant="outline" onClick={() => {setConfirmDeleteId(null); newTelaTextareaRef.current?.focus();}}>Cancelar</Button>
+                <Button variant="destructive" onClick={handleRemoveTelaConfirmed}>Deletar</Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
       </motion.div>
     </motion.div>
   );

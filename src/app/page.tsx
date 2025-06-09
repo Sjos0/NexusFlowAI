@@ -1,4 +1,3 @@
-
 // src/app/page.tsx
 'use client';
 
@@ -41,12 +40,13 @@ export default function Home() {
   const [confirmToolDeleteModalState, setConfirmToolDeleteModalState] = useState<{ isOpen: boolean; toolId: string | null; category: ToolCategory | null; toolName: string | null }>({ isOpen: false, toolId: null, category: null, toolName: null });
   const [addSubOptionModalState, setAddSubOptionModalState] = useState<{ isOpen: boolean; tool: (Tool & { category: ToolCategory }) | null }>({ isOpen: false, tool: null });
   
-  const [manageTelasModalState, setManageTelasModalState] = useState<{
+  // Updated state for ManageTelasModal
+  const [manageTelasModal, setManageTelasModal] = useState<{
     isOpen: boolean;
-    toolId: string | null;
-    category: ToolCategory | null;
-    subOption: SubOption | null;
-  }>({ isOpen: false, toolId: null, category: null, subOption: null });
+    toolId: string;
+    category: ToolCategory;
+    subOptionId: string;
+  } | null>(null);
 
   const [editToolModalState, setEditToolModalState] = useState<{
     isOpen: boolean;
@@ -121,25 +121,9 @@ export default function Home() {
     setAddSubOptionModalState({ isOpen: false, tool: null });
   };
 
+  // Updated handler for opening ManageTelasModal
   const handleOpenManageTelas = (toolId: string, category: ToolCategory, subOption: SubOption) => {
-    setManageTelasModalState({ isOpen: true, toolId, category, subOption });
-  };
-
-  const handleSaveTelas = (updatedSubOption: SubOption) => {
-    const { toolId, category } = manageTelasModalState;
-    if (!toolId || !category || category === 'variables') return;
-
-    const toolsForCategory = useToolsStore.getState()[category];
-    const toolToUpdate = (toolsForCategory as Tool[]).find(t => t.id === toolId);
-
-    if (!toolToUpdate) return;
-
-    const newSubOptionsForTool = toolToUpdate.subOptions.map(so => 
-      so.id === updatedSubOption.id ? updatedSubOption : so
-    );
-
-    updateTool(category, toolId, { subOptions: newSubOptionsForTool });
-    setManageTelasModalState({ isOpen: false, toolId: null, category: null, subOption: null });
+    setManageTelasModal({ isOpen: true, toolId, category, subOptionId: subOption.id });
   };
 
   const handleOpenEditTool = (category: ToolCategory, tool: Tool) => {
@@ -275,11 +259,13 @@ export default function Home() {
             toolName={addSubOptionModalState.tool.name}
           />
         )}
-        {manageTelasModalState.isOpen && manageTelasModalState.subOption && (
+        {/* Updated ManageTelasModal invocation */}
+        {manageTelasModal?.isOpen && (
           <ManageTelasModal
-            onClose={() => setManageTelasModalState({ isOpen: false, toolId: null, category: null, subOption: null })}
-            subOption={manageTelasModalState.subOption}
-            onSave={handleSaveTelas}
+            onClose={() => setManageTelasModal(null)}
+            toolId={manageTelasModal.toolId}
+            category={manageTelasModal.category}
+            subOptionId={manageTelasModal.subOptionId}
           />
         )}
         {editToolModalState.isOpen && editToolModalState.tool && (
