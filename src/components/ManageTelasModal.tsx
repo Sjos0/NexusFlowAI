@@ -3,13 +3,12 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, X, Check, Edit2 } from 'lucide-react';
+import { Plus, X, Check, Edit2, Save } from 'lucide-react';
 import { Tela, SubOption } from '@/lib/types';
 import TextareaAutosize from 'react-textarea-autosize';
 import { Button } from '@/components/ui/button';
 import { IconButton } from './IconButton';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Input } from '@/components/ui/input'; // Although not directly used in final, good for consistency if needed
 import { Label } from '@/components/ui/label';
 
 interface ManageTelasModalProps {
@@ -21,17 +20,22 @@ interface ManageTelasModalProps {
 export function ManageTelasModal({ onClose, subOption, onSave }: ManageTelasModalProps) {
   const [telas, setTelas] = useState<Tela[]>([]);
   const [newTelaContent, setNewTelaContent] = useState('');
-  const [editingTela, setEditingTela] = useState<{ id: string; content: string } | null>(null);
+  
+  const [editingContent, setEditingContent] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
   const newTelaTextareaRef = useRef<HTMLTextAreaElement>(null);
   const editTelaTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     setTelas(subOption.telas || []);
-    newTelaTextareaRef.current?.focus();
+    // Focus on new tela input when modal opens, but not if an edit is in progress
+    if (!editingId) {
+        newTelaTextareaRef.current?.focus();
+    }
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        if (editingTela) {
-          setEditingTela(null);
+        if (editingId) {
+          handleCancelEditing();
         } else {
           onClose();
         }
@@ -41,14 +45,34 @@ export function ManageTelasModal({ onClose, subOption, onSave }: ManageTelasModa
     return () => {
       document.removeEventListener('keydown', handleEscape);
     };
-  }, [subOption, onClose, editingTela]);
+  }, [subOption, onClose, editingId]);
 
   useEffect(() => {
-    if (editingTela) {
+    if (editingId) {
         editTelaTextareaRef.current?.focus();
         editTelaTextareaRef.current?.select();
     }
-  }, [editingTela]);
+  }, [editingId]);
+
+
+  const handleStartEditing = (tela: Tela) => {
+    setEditingId(tela.id);
+    setEditingContent(tela.content);
+  };
+
+  const handleCancelEditing = () => {
+    setEditingId(null);
+    setEditingContent('');
+    newTelaTextareaRef.current?.focus(); // Return focus to add new
+  };
+
+  const handleSaveEdit = () => {
+    if (editingId === null || !editingContent.trim()) return;
+    setTelas(prevTelas =>
+      prevTelas.map(t => (t.id === editingId ? { ...t, content: editingContent.trim() } : t))
+    );
+    handleCancelEditing(); 
+  };
 
   const handleAddTela = () => {
     if (newTelaContent.trim()) {
@@ -61,16 +85,6 @@ export function ManageTelasModal({ onClose, subOption, onSave }: ManageTelasModa
 
   const handleRemoveTela = (telaId: string) => {
     setTelas(prevTelas => prevTelas.filter(t => t.id !== telaId));
-  };
-  
-  const handleStartEditing = (tela: Tela) => {
-    setEditingTela({ id: tela.id, content: tela.content });
-  };
-
-  const handleSaveEdit = () => {
-    if (!editingTela || !editingTela.content.trim()) return;
-    setTelas(prevTelas => prevTelas.map(t => t.id === editingTela.id ? { ...editingTela, content: editingTela.content.trim() } : t));
-    setEditingTela(null);
   };
 
   const handleSaveAndClose = () => {
@@ -92,7 +106,7 @@ export function ManageTelasModal({ onClose, subOption, onSave }: ManageTelasModa
         animate={{ scale: 1, y: 0 }}
         exit={{ scale: 0.95, y: 20, opacity: 0 }}
         transition={{ duration: 0.2 }}
-        className="bg-card p-6 rounded-lg shadow-xl w-full max-w-2xl flex flex-col h-[80vh]"
+        className="bg-card p-6 rounded-lg shadow-xl w-full max-w-2xl flex flex-col h-[85vh]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex-shrink-0">
@@ -102,37 +116,34 @@ export function ManageTelasModal({ onClose, subOption, onSave }: ManageTelasModa
           </p>
         </div>
         
-        <ScrollArea className="flex-grow mb-4 pr-3 -mr-1">
+        <ScrollArea className="flex-grow mb-4 pr-3 -mr-1 my-4"> {/* Adjusted -mr-4 to -mr-1 to match scroll-area styles */}
           <div className="space-y-3">
-            {telas.length === 0 && (
-              <p className="text-center text-muted-foreground p-4 italic">Nenhuma tela de contexto adicionada.</p>
-            )}
+            {telas.length === 0 && <p className="text-center text-muted-foreground p-4 italic">Nenhuma tela de contexto adicionada.</p>}
             {telas.map(tela => (
               <div key={tela.id} className="bg-muted p-3 rounded-md text-sm group relative">
-                {editingTela?.id === tela.id ? (
+                {editingId === tela.id ? (
                   // EDITING VIEW
                   <div className="space-y-2">
                     <Label htmlFor={`edit-tela-${tela.id}`} className="sr-only">Editar conteúdo da tela</Label>
                     <TextareaAutosize
                       id={`edit-tela-${tela.id}`}
                       ref={editTelaTextareaRef}
-                      value={editingTela.content}
-                      onChange={(e) => setEditingTela({ ...editingTela, content: e.target.value })}
+                      value={editingContent}
+                      onChange={(e) => setEditingContent(e.target.value)}
                       className="w-full bg-input border-border rounded-md p-2 text-foreground focus:outline-none min-h-[60px]"
-                      autoFocus
                       minRows={2}
                     />
-                    <div className="flex justify-end space-x-2 pt-1">
-                      <Button variant="ghost" size="sm" onClick={() => setEditingTela(null)} className="text-xs">Cancelar</Button>
-                      <Button size="sm" onClick={handleSaveEdit} className="text-xs">
-                        <Check size={14} className="mr-1.5"/>Salvar
+                    <div className="flex justify-end space-x-4 pt-1">
+                      <Button variant="ghost" size="sm" onClick={handleCancelEditing} className="text-xs text-muted-foreground hover:text-foreground">Cancelar</Button>
+                      <Button size="sm" onClick={handleSaveEdit} className="text-xs" disabled={!editingContent.trim()}>
+                        <Check size={14} className="mr-1.5"/>Salvar Alteração
                       </Button>
                     </div>
                   </div>
                 ) : (
                   // DISPLAY VIEW
-                  <div className="flex justify-between items-start">
-                    <p className="text-muted-foreground whitespace-pre-wrap flex-grow py-1 pr-16">{tela.content}</p>
+                  <div className="flex justify-between items-start gap-4">
+                    <p className="text-muted-foreground whitespace-pre-wrap flex-grow break-words py-1 pr-16">{tela.content}</p>
                     <div className="absolute top-2 right-2 flex flex-col items-end space-y-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                       <IconButton onClick={() => handleStartEditing(tela)} ariaLabel="Editar tela" className="p-1.5 hover:bg-accent/20 rounded-md">
                         <Edit2 size={14} className="text-muted-foreground hover:text-primary"/>
@@ -150,7 +161,7 @@ export function ManageTelasModal({ onClose, subOption, onSave }: ManageTelasModa
 
         {/* ADD NEW TELA AREA */}
         <div className="flex-shrink-0 space-y-3 border-t border-border pt-4">
-          <Label htmlFor="newTelaContent" className="sr-only">Novo conteúdo da tela</Label>
+          <Label htmlFor="newTelaContent" className="text-sm font-medium text-muted-foreground">Adicionar Nova Tela de Contexto</Label>
           <TextareaAutosize
             id="newTelaContent"
             ref={newTelaTextareaRef}
@@ -158,7 +169,7 @@ export function ManageTelasModal({ onClose, subOption, onSave }: ManageTelasModa
             maxRows={5}
             value={newTelaContent}
             onChange={(e) => setNewTelaContent(e.target.value)}
-            placeholder="Digite o texto de ajuda contextual para a IA..."
+            placeholder="Digite as instruções ou contexto para a IA para esta opção..."
             className="w-full bg-input border-border text-foreground rounded-md p-2"
             onKeyDown={(e) => {
               if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
@@ -167,7 +178,7 @@ export function ManageTelasModal({ onClose, subOption, onSave }: ManageTelasModa
               }
             }}
           />
-          <Button onClick={handleAddTela} variant="outline" className="w-full">
+          <Button onClick={handleAddTela} variant="outline" className="w-full" disabled={!newTelaContent.trim()}>
             <Plus size={16} className="mr-2" />
             Adicionar Tela (Ctrl+Enter)
           </Button>
@@ -175,7 +186,7 @@ export function ManageTelasModal({ onClose, subOption, onSave }: ManageTelasModa
         
         <div className="flex-shrink-0 flex justify-end mt-6">
           <Button type="button" onClick={handleSaveAndClose} size="lg">
-            SALVAR E FECHAR
+            <Save size={18} className="mr-2"/>SALVAR TUDO E FECHAR
           </Button>
         </div>
       </motion.div>
