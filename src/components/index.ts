@@ -13,4 +13,5 @@ export * from './ToolColumn';
 export * from './AddEditVariableModal';
 export * from './VariableCard';
 export * from './VariableColumn';
-export * from './IconButton'; // Added export
+export * from './IconButton';
+export * from './TelaCard'; // Added export

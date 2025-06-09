@@ -3,13 +3,14 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, X, Check, Edit2, Save } from 'lucide-react';
+import { Plus, Save, Check } from 'lucide-react'; // Edit2, X are used by TelaCard
 import { Tela, SubOption } from '@/lib/types';
 import TextareaAutosize from 'react-textarea-autosize';
+import { TelaCard } from './TelaCard'; // Import the new component
 import { Button } from '@/components/ui/button';
-import { IconButton } from './IconButton';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '@/components/ui/label';
+import { ScrollArea } from '@/components/ui/scroll-area';
+
 
 interface ManageTelasModalProps {
   onClose: () => void;
@@ -20,15 +21,14 @@ interface ManageTelasModalProps {
 export function ManageTelasModal({ onClose, subOption, onSave }: ManageTelasModalProps) {
   const [telas, setTelas] = useState<Tela[]>([]);
   const [newTelaContent, setNewTelaContent] = useState('');
-  
   const [editingContent, setEditingContent] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const newTelaTextareaRef = useRef<HTMLTextAreaElement>(null);
   const editTelaTextareaRef = useRef<HTMLTextAreaElement>(null);
 
+
   useEffect(() => {
     setTelas(subOption.telas || []);
-    // Focus on new tela input when modal opens, but not if an edit is in progress
     if (!editingId) {
         newTelaTextareaRef.current?.focus();
     }
@@ -54,7 +54,6 @@ export function ManageTelasModal({ onClose, subOption, onSave }: ManageTelasModa
     }
   }, [editingId]);
 
-
   const handleStartEditing = (tela: Tela) => {
     setEditingId(tela.id);
     setEditingContent(tela.content);
@@ -63,17 +62,18 @@ export function ManageTelasModal({ onClose, subOption, onSave }: ManageTelasModa
   const handleCancelEditing = () => {
     setEditingId(null);
     setEditingContent('');
-    newTelaTextareaRef.current?.focus(); // Return focus to add new
+    newTelaTextareaRef.current?.focus();
   };
 
   const handleSaveEdit = () => {
     if (editingId === null || !editingContent.trim()) return;
-    setTelas(prevTelas =>
-      prevTelas.map(t => (t.id === editingId ? { ...t, content: editingContent.trim() } : t))
+    const updatedTelas = telas.map(t =>
+      t.id === editingId ? { ...t, content: editingContent.trim() } : t
     );
+    setTelas(updatedTelas);
     handleCancelEditing(); 
   };
-
+  
   const handleAddTela = () => {
     if (newTelaContent.trim()) {
       const newTela: Tela = { id: crypto.randomUUID(), content: newTelaContent.trim() };
@@ -109,6 +109,7 @@ export function ManageTelasModal({ onClose, subOption, onSave }: ManageTelasModa
         className="bg-card p-6 rounded-lg shadow-xl w-full max-w-2xl flex flex-col h-[85vh]"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Modal Header */}
         <div className="flex-shrink-0">
           <h2 className="font-headline text-xl mb-1 text-foreground">Gerenciar Contexto (Telas)</h2>
           <p className="text-muted-foreground mb-4 text-sm">
@@ -116,14 +117,15 @@ export function ManageTelasModal({ onClose, subOption, onSave }: ManageTelasModa
           </p>
         </div>
         
-        <ScrollArea className="flex-grow mb-4 pr-3 -mr-1 my-4"> {/* Adjusted -mr-4 to -mr-1 to match scroll-area styles */}
-          <div className="space-y-3">
+        {/* SCROLLABLE AREA */}
+        <ScrollArea className="flex-grow mb-4 pr-3 -mr-1 my-4">
+          <div className="space-y-4">
             {telas.length === 0 && <p className="text-center text-muted-foreground p-4 italic">Nenhuma tela de contexto adicionada.</p>}
             {telas.map(tela => (
-              <div key={tela.id} className="bg-muted p-3 rounded-md text-sm group relative">
+              <div key={tela.id}>
                 {editingId === tela.id ? (
                   // EDITING VIEW
-                  <div className="space-y-2">
+                  <div className="bg-muted p-3 rounded-lg border border-primary space-y-2">
                     <Label htmlFor={`edit-tela-${tela.id}`} className="sr-only">Editar conteúdo da tela</Label>
                     <TextareaAutosize
                       id={`edit-tela-${tela.id}`}
@@ -141,18 +143,12 @@ export function ManageTelasModal({ onClose, subOption, onSave }: ManageTelasModa
                     </div>
                   </div>
                 ) : (
-                  // DISPLAY VIEW
-                  <div className="flex justify-between items-start gap-4">
-                    <p className="text-muted-foreground whitespace-pre-wrap flex-grow break-words py-1 pr-16">{tela.content}</p>
-                    <div className="absolute top-2 right-2 flex flex-col items-end space-y-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
-                      <IconButton onClick={() => handleStartEditing(tela)} ariaLabel="Editar tela" className="p-1.5 hover:bg-accent/20 rounded-md">
-                        <Edit2 size={14} className="text-muted-foreground hover:text-primary"/>
-                      </IconButton>
-                      <IconButton onClick={() => handleRemoveTela(tela.id)} ariaLabel="Remover tela" className="p-1.5 hover:bg-destructive/20 rounded-md">
-                        <X size={16} className="text-muted-foreground hover:text-destructive"/>
-                      </IconButton>
-                    </div>
-                  </div>
+                  // DISPLAY VIEW using the new TelaCard component
+                  <TelaCard
+                    content={tela.content}
+                    onEdit={() => handleStartEditing(tela)}
+                    onRemove={() => handleRemoveTela(tela.id)}
+                  />
                 )}
               </div>
             ))}
@@ -161,9 +157,9 @@ export function ManageTelasModal({ onClose, subOption, onSave }: ManageTelasModa
 
         {/* ADD NEW TELA AREA */}
         <div className="flex-shrink-0 space-y-3 border-t border-border pt-4">
-          <Label htmlFor="newTelaContent" className="text-sm font-medium text-muted-foreground">Adicionar Nova Tela de Contexto</Label>
+          <Label htmlFor="newTelaContentManageModal" className="text-sm font-medium text-muted-foreground">Adicionar Nova Tela de Contexto</Label>
           <TextareaAutosize
-            id="newTelaContent"
+            id="newTelaContentManageModal"
             ref={newTelaTextareaRef}
             minRows={2}
             maxRows={5}
