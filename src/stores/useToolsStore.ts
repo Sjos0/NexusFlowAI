@@ -25,19 +25,37 @@ const loadState = (): StoredState => {
     try {
       const parsed = JSON.parse(item) as Partial<StoredState>;
       
-      // Ensure variables have all required fields with defaults
       const validatedVariables = (parsed.variables || []).map(v => ({
-        id: v.id || crypto.randomUUID(), // Should always exist from save, but fallback
+        id: v.id || crypto.randomUUID(),
         name: v.name || 'Variável Sem Nome',
         type: variableTypes.includes(v.type as VariableType) ? v.type as VariableType : 'String',
         isSecure: typeof v.isSecure === 'boolean' ? v.isSecure : false,
         description: v.description || '',
       }));
 
+      const validateTools = (tools: Tool[] | undefined): Tool[] => {
+        return (tools || []).map(tool => ({
+          ...tool,
+          id: tool.id || crypto.randomUUID(),
+          name: tool.name || 'Ferramenta Sem Nome',
+          subOptions: (tool.subOptions || []).map(so => ({
+            ...so,
+            id: so.id || crypto.randomUUID(),
+            name: so.name || 'SubOpção Sem Nome',
+            telas: (so.telas || []).map(t => ({
+              ...t,
+              id: t.id || crypto.randomUUID(),
+              content: t.content || '',
+            })),
+          })),
+        }));
+      };
+
+
       return {
-        triggers: parsed.triggers || [],
-        actions: parsed.actions || [],
-        constraints: parsed.constraints || [],
+        triggers: validateTools(parsed.triggers),
+        actions: validateTools(parsed.actions),
+        constraints: validateTools(parsed.constraints),
         variables: validatedVariables,
       };
     } catch (error) {
@@ -74,10 +92,11 @@ export interface ToolsState {
   addTool: (category: ToolCategory, tool: Tool) => void;
   removeTool: (category: ToolCategory, toolId: string) => void;
   updateTool: (category: ToolCategory, toolId: string, updatedTool: Partial<Tool>) => void;
-  addVariable: (variableData: Omit<Variable, 'id' | 'description'>) => void; // Description is optional, handled internally if needed
+  addVariable: (variableData: Omit<Variable, 'id' | 'description'>) => void;
   removeVariable: (variableId: string) => void;
   updateVariable: (variableId: string, updatedData: Partial<Omit<Variable, 'id' | 'description'>>) => void;
   hydrate: () => void;
+  overwriteState: (newState: StoredState) => void;
 }
 
 export const useToolsStore = create<ToolsState>((set) => {
@@ -138,7 +157,7 @@ export const useToolsStore = create<ToolsState>((set) => {
         const newVariable: Variable = { 
           ...variableData, 
           id: crypto.randomUUID(),
-          description: '', // Initialize with empty description
+          description: '', 
         };
         const newState = { ...state, variables: [...state.variables, newVariable] };
         saveState({ triggers: newState.triggers, actions: newState.actions, constraints: newState.constraints, variables: newState.variables });
@@ -165,6 +184,42 @@ export const useToolsStore = create<ToolsState>((set) => {
         saveState({ triggers: newState.triggers, actions: newState.actions, constraints: newState.constraints, variables: newState.variables });
         return newState;
       });
+    },
+    overwriteState: (newState) => {
+       const validatedVariables = (newState.variables || []).map(v => ({
+        id: v.id || crypto.randomUUID(),
+        name: v.name || 'Variável Sem Nome',
+        type: variableTypes.includes(v.type as VariableType) ? v.type as VariableType : 'String',
+        isSecure: typeof v.isSecure === 'boolean' ? v.isSecure : false,
+        description: v.description || '',
+      }));
+
+      const validateTools = (tools: Tool[] | undefined): Tool[] => {
+        return (tools || []).map(tool => ({
+          ...tool,
+          id: tool.id || crypto.randomUUID(),
+          name: tool.name || 'Ferramenta Sem Nome',
+          subOptions: (tool.subOptions || []).map(so => ({
+            ...so,
+            id: so.id || crypto.randomUUID(),
+            name: so.name || 'SubOpção Sem Nome',
+            telas: (so.telas || []).map(t => ({
+              ...t,
+              id: t.id || crypto.randomUUID(),
+              content: t.content || '',
+            })),
+          })),
+        }));
+      };
+
+      const validState: StoredState = {
+        triggers: validateTools(newState.triggers),
+        actions: validateTools(newState.actions),
+        constraints: validateTools(newState.constraints),
+        variables: validatedVariables,
+      };
+      set(validState);
+      saveState(validState);
     },
   };
 });

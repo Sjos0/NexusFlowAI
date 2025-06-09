@@ -1,7 +1,7 @@
 // src/app/page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { AnimatePresence } from 'framer-motion';
 // Component Imports
 import { 
@@ -19,6 +19,7 @@ import {
 import { useToolsStore } from '@/stores/useToolsStore';
 import type { ToolCategory, Tool, SubOption, Tela, Variable } from '@/lib/types';
 import { BotMessageSquare } from 'lucide-react';
+import { exportKnowledgeBase } from '@/lib/kbManager';
 
 export default function Home() {
   const { 
@@ -28,8 +29,12 @@ export default function Home() {
     addTool,
     addVariable,
     removeVariable,
-    updateVariable
+    updateVariable,
+    overwriteState, // New function from store
+    ...kbState // Contains triggers, actions, constraints, variables
   } = useToolsStore();
+
+  const importFileRef = useRef<HTMLInputElement>(null); // Ref for hidden file input
 
   useEffect(() => { 
     hydrate(); 
@@ -40,7 +45,6 @@ export default function Home() {
   const [confirmToolDeleteModalState, setConfirmToolDeleteModalState] = useState<{ isOpen: boolean; toolId: string | null; category: ToolCategory | null; toolName: string | null }>({ isOpen: false, toolId: null, category: null, toolName: null });
   const [addSubOptionModalState, setAddSubOptionModalState] = useState<{ isOpen: boolean; tool: (Tool & { category: ToolCategory }) | null }>({ isOpen: false, tool: null });
   
-  // Updated state for ManageTelasModal
   const [manageTelasModal, setManageTelasModal] = useState<{
     isOpen: boolean;
     toolId: string;
@@ -121,7 +125,6 @@ export default function Home() {
     setAddSubOptionModalState({ isOpen: false, tool: null });
   };
 
-  // Updated handler for opening ManageTelasModal
   const handleOpenManageTelas = (toolId: string, category: ToolCategory, subOption: SubOption) => {
     setManageTelasModal({ isOpen: true, toolId, category, subOptionId: subOption.id });
   };
@@ -195,6 +198,74 @@ export default function Home() {
     setConfirmVariableDeleteModalState({ isOpen: false, variableId: null, variableName: undefined });
   };
 
+  // Import/Export Handlers
+  const handleExport = () => {
+    const dataToExport = {
+      triggers: kbState.triggers,
+      actions: kbState.actions,
+      constraints: kbState.constraints,
+      variables: kbState.variables,
+    };
+    exportKnowledgeBase(dataToExport);
+  };
+
+  const handleImportClick = () => {
+    importFileRef.current?.click();
+  };
+
+  const handleFileImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.endsWith('.nexus')) {
+      alert('Erro: Apenas arquivos .nexus podem ser importados.');
+      if (event.target) event.target.value = ''; // Reset input
+      return;
+    }
+
+    if (!window.confirm('Atenção: Importar um novo arquivo irá substituir todo o seu Banco de Conhecimento atual. Deseja continuar?')) {
+      if (event.target) event.target.value = ''; // Reset input
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const encodedData = e.target?.result as string;
+        // Decode Base64 to binary string, then binary string to UTF-8 string, then parse JSON
+        const jsonString = decodeURIComponent(escape(atob(encodedData)));
+        const importedData = JSON.parse(jsonString);
+        
+        // Basic validation for top-level keys
+        if (
+          typeof importedData === 'object' &&
+          importedData !== null &&
+          Array.isArray(importedData.triggers) &&
+          Array.isArray(importedData.actions) &&
+          Array.isArray(importedData.constraints) &&
+          Array.isArray(importedData.variables)
+        ) {
+          overwriteState(importedData); // This function in store should handle deeper validation/defaults
+          alert('Banco de Conhecimento importado com sucesso!');
+        } else {
+          throw new Error('Estrutura de dados do arquivo .nexus inválida.');
+        }
+
+      } catch (err) {
+        console.error("Erro ao importar arquivo:", err);
+        alert('Erro: O arquivo está corrompido ou não é um arquivo .nexus válido.');
+      } finally {
+        if (event.target) event.target.value = ''; // Reset input in all cases after processing
+      }
+    };
+    reader.onerror = () => {
+        alert('Erro ao ler o arquivo.');
+        if (event.target) event.target.value = ''; // Reset input
+    };
+    reader.readAsText(file);
+  };
+
+
   return (
     <>
       <main className="flex flex-col h-screen bg-background">
@@ -234,6 +305,17 @@ export default function Home() {
         onOpenAddVariable={handleOpenAddVariable}
         onOpenEditVariable={handleOpenEditVariable}
         onOpenConfirmVariableDelete={handleOpenConfirmVariableDelete}
+        onExport={handleExport}
+        onImport={handleImportClick}
+      />
+
+      {/* Hidden file input for import */}
+      <input
+        type="file"
+        ref={importFileRef}
+        className="hidden"
+        accept=".nexus"
+        onChange={handleFileImport}
       />
 
       <AnimatePresence>
@@ -259,7 +341,6 @@ export default function Home() {
             toolName={addSubOptionModalState.tool.name}
           />
         )}
-        {/* Updated ManageTelasModal invocation */}
         {manageTelasModal?.isOpen && (
           <ManageTelasModal
             onClose={() => setManageTelasModal(null)}

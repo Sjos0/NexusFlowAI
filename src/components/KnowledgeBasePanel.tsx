@@ -4,12 +4,14 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { ToolColumn } from './ToolColumn';
 import { VariableColumn } from './VariableColumn';
-import { X, Zap, Target, ShieldCheck, Database } from 'lucide-react';
+import { X, Zap, Target, ShieldCheck, Database, Upload, Download } from 'lucide-react';
 import { useToolsStore } from '@/stores/useToolsStore';
 import type { ToolCategory, Tool, SubOption, Variable } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ToolCard } from '@/components';
 import { IconButton } from './IconButton';
+import { Button } from '@/components/ui/button';
+
 
 const categoryColors: Record<ToolCategory, string> = {
   triggers: 'hsl(var(--destructive))', 
@@ -31,6 +33,8 @@ interface KnowledgeBasePanelProps {
   onOpenAddVariable: () => void;
   onOpenEditVariable: (variable: Variable) => void;
   onOpenConfirmVariableDelete: (variableId: string, variableName?: string) => void;
+  onExport: () => void;
+  onImport: () => void;
 }
 
 export function KnowledgeBasePanel({
@@ -45,7 +49,9 @@ export function KnowledgeBasePanel({
   onOpenConfirmSubOptionDelete,
   onOpenAddVariable,
   onOpenEditVariable,
-  onOpenConfirmVariableDelete
+  onOpenConfirmVariableDelete,
+  onExport,
+  onImport
 }: KnowledgeBasePanelProps) {
   const triggers = useToolsStore(state => state.triggers);
   const actions = useToolsStore(state => state.actions);
@@ -94,9 +100,22 @@ export function KnowledgeBasePanel({
                 <X size={24} />
               </IconButton>
             </div>
-            <p className="text-muted-foreground px-6 pt-4 pb-2 text-sm flex-shrink-0">
-              A IA usará todas as ferramentas, variáveis e sub-opções listadas aqui para criar seus planos de automação.
-            </p>
+
+            <div className="px-6 pt-4 pb-2 text-sm flex-shrink-0">
+                <p className="text-muted-foreground mb-4">
+                A IA usará todas as ferramentas, variáveis e sub-opções listadas aqui para criar seus planos de automação.
+                </p>
+                <div className="flex space-x-3">
+                    <Button onClick={onExport} variant="outline" className="flex-1">
+                    <Download size={16} className="mr-2" /> Exportar Conhecimento
+                    </Button>
+                    <Button onClick={onImport} variant="outline" className="flex-1">
+                    <Upload size={16} className="mr-2" /> Importar Conhecimento
+                    </Button>
+                </div>
+            </div>
+
+
             <ScrollArea className="flex-grow">
               <div className="p-6">
                 <div className="flex flex-col lg:flex-row lg:space-x-6 space-y-6 lg:space-y-0">
