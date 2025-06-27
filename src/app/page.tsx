@@ -1,4 +1,3 @@
-
 // src/app/page.tsx
 'use client';
 
@@ -20,7 +19,7 @@ import {
 // Util & Hook Imports
 import { useToolsStore } from '@/stores/useToolsStore';
 import type { ToolCategory, Tool, SubOption, Tela, Variable } from '@/lib/types';
-import { BotMessageSquare } from 'lucide-react';
+import { Book } from 'lucide-react';
 import { exportKnowledgeBase } from '@/lib/kbManager';
 
 export default function Home() {
@@ -289,10 +288,10 @@ export default function Home() {
           </div>
           <button 
             onClick={() => setIsKbOpen(true)}
-            className="flex items-center space-x-2 bg-card text-muted-foreground px-4 py-2 rounded-lg hover:text-primary transition-colors font-medium"
+            className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 text-white shadow-lg transition-transform duration-300 ease-in-out hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 focus:ring-offset-background"
+            aria-label="Abrir Banco de Conhecimento"
           >
-            <BotMessageSquare size={18} />
-            <span>Banco de Conhecimento</span>
+            <Book size={24} />
           </button>
         </header>
         
@@ -400,4 +399,3 @@ export default function Home() {
     </>
   );
 }
-
