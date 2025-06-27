@@ -105,7 +105,7 @@ export const importKnowledgeBaseFromText = (text: string): KnowledgeBaseData => 
       if (indentation === 2 && content.startsWith('- ')) { // Tool
         currentTool = {
           id: crypto.randomUUID(),
-          name: content.substring(2),
+          name: content.substring(2).trim(),
           subOptions: []
         };
         data[currentSection].push(currentTool);
@@ -113,22 +113,22 @@ export const importKnowledgeBaseFromText = (text: string): KnowledgeBaseData => 
       } else if (currentTool && indentation === 4 && content.startsWith('- ')) { // SubOption
         currentSubOption = {
           id: crypto.randomUUID(),
-          name: content.substring(2),
+          name: content.substring(2).trim(),
           telas: []
         };
         currentTool.subOptions.push(currentSubOption);
       } else if (currentSubOption && indentation === 6 && content.startsWith('- Tela: ')) { // Tela
         currentSubOption.telas.push({
           id: crypto.randomUUID(),
-          content: content.substring(8)
+          content: content.substring(8).trim()
         });
       }
     }
   }
 
   const totalItems = data.triggers.length + data.actions.length + data.constraints.length + data.variables.length;
-   if (totalItems === 0) {
-      throw new Error("Formato de arquivo inválido ou arquivo vazio.");
+   if (totalItems === 0 && !text.includes('(Nenhum')) {
+      throw new Error("Formato de arquivo inválido ou o arquivo não contém dados para importar.");
    }
 
   return data;

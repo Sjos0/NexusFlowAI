@@ -23,7 +23,7 @@ import { Book } from 'lucide-react';
 import { exportKnowledgeBase, importKnowledgeBaseFromText } from '@/lib/kbManager';
 
 export default function Home() {
-  // IMPORTANT: We now subscribe to the entire state to ensure re-renders
+  // IMPORTANT: We now subscribe to the entire store to ensure re-renders on overwrite.
   const store = useToolsStore();
   const { 
     overwriteState, 
@@ -244,10 +244,13 @@ export default function Home() {
         const text = e.target?.result as string;
         if (!text) throw new Error("O arquivo está vazio.");
         
+        toast.loading('Analisando e substituindo dados...', { id: toastId });
         const importedData = importKnowledgeBaseFromText(text);
         
         overwriteState(importedData);
-        toast.success('Banco de Conhecimento importado com sucesso!', { id: toastId });
+        
+        const feedback = `Importação concluída: ${importedData.triggers.length} gatilhos, ${importedData.actions.length} ações, ${importedData.constraints.length} restrições e ${importedData.variables.length} variáveis foram carregadas.`;
+        toast.success(feedback, { id: toastId, duration: 6000 });
 
       } catch (err) {
         console.error("Erro ao importar arquivo:", err);
