@@ -1,6 +1,3 @@
-// src/lib/ai/wikiContext.ts
-
-export const WIKI_CONTEXT = `
 ### BANCO DE CONHECIMENTO NEXUSFLOW ###
 
 ## GATILHOS
@@ -295,7 +292,7 @@ export const WIKI_CONTEXT = `
     - Definir variável
       - Tela: Tela 1  Selecione a variável  [ ] Nova Variável [... Lista com variáveis já criadas se houver]  CANCELAR | OK
       - Tela: Tela 2: [ X ] Nova Variável  * Criar nova variável  [ ] Local  [ ] Global  [... Digite o nome da variável] | botão: [...] (Lista de palavras mágicas, as palavras mágicas não são por "[ ]", são por "{ }")  * Tipo de variável:  Lista: Booleano, inteiro, string, decimal, dicionário e lista  [ ] Criar variável agora [ ] Tornar a variável segura
-      - Tela: Tela 3: [ X ] Local, Booleano, [ X ] Criar variável agora  * Ajustes [Nome da variável]  Lista: [ ] falso, [ ] verdadeiro, [ ] inverter, [ ] \`[Prompt de usuário]\`, [ ] Variável (mostra lista de variáveis criadas)  CANCELAR | OK
+      - Tela: Tela 3: [ X ] Local, Booleano, [ X ] Criar variável agora  * Ajustes [Nome da variável]  Lista: [ ] falso, [ ] verdadeiro, [ ] inverter, [ ] `[Prompt de usuário]`, [ ] Variável (mostra lista de variáveis criadas)  CANCELAR | OK
     - Eliminar variável
     - Limpar entrada de Dicionário/Lista
     - Limpar variáveis
@@ -396,4 +393,3 @@ export const WIKI_CONTEXT = `
 
 ## VARIÁVEIS
   (Nenhuma variável definida)
-`;

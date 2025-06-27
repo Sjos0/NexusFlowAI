@@ -2,17 +2,14 @@
 import { create } from 'zustand';
 import type { Tool, ToolCategory, Variable, VariableType, SubOption, Tela } from '@/lib/types';
 import { variableTypes } from '@/lib/types';
+import { WIKI_CONTEXT } from '@/lib/ai/wikiContext';
+import { importKnowledgeBaseFromText } from '@/lib/kbManager';
 
 const STORAGE_KEY = 'nexusflow-tools-storage';
 
 export type StoredState = Pick<ToolsState, 'triggers' | 'actions' | 'constraints' | 'variables'>;
 
-const defaultState: StoredState = {
-  triggers: [],
-  actions: [],
-  constraints: [],
-  variables: [],
-};
+const defaultState: StoredState = importKnowledgeBaseFromText(WIKI_CONTEXT);
 
 const loadState = (): StoredState => {
   if (typeof window === 'undefined') {
