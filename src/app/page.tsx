@@ -234,7 +234,7 @@ export default function Home() {
 
   return (
     <>
-      <main className="flex flex-col h-screen bg-background">
+      <main className="flex flex-col h-[100dvh] bg-background">
         
         <header className="flex justify-between items-center p-4 lg:p-6 border-b border-border flex-shrink-0">
           <div>
@@ -252,7 +252,7 @@ export default function Home() {
           </button>
         </header>
         
-        <div className="flex-grow overflow-hidden p-4 lg:p-6 flex justify-center">
+        <div className="flex-grow overflow-hidden flex justify-center">
           <AIPromptArea />
         </div>
 

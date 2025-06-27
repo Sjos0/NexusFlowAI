@@ -107,7 +107,7 @@ export function AIPromptArea() {
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto flex flex-col h-full">
+    <div className="w-full max-w-4xl mx-auto flex flex-col h-full p-4 lg:p-6">
       <div ref={chatContainerRef} className="flex-grow overflow-y-auto pr-2 space-y-4 pb-4">
         <AnimatePresence initial={false}>
           {isLoading && (
