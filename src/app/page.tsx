@@ -23,6 +23,7 @@ import type { ToolCategory, Tool, SubOption, Tela, Variable } from '@/lib/types'
 import { Book } from 'lucide-react';
 import { generateKnowledgeBaseText } from '@/lib/kbManager';
 import { StoredState } from '@/stores/useToolsStore';
+import { useHasMounted } from '@/hooks/useHasMounted';
 
 export default function Home() {
   const store = useToolsStore();
@@ -41,9 +42,13 @@ export default function Home() {
     hydrate 
   } = store;
   
+  const hasMounted = useHasMounted();
+
   useEffect(() => { 
-    hydrate(); 
-  }, [hydrate]);
+    if (hasMounted) {
+      hydrate(); 
+    }
+  }, [hasMounted, hydrate]);
 
   // State for Modals
   const [addToolModalState, setAddToolModalState] = useState<{ isOpen: boolean; category: ToolCategory | null; categoryTitle: string }>({ isOpen: false, category: null, categoryTitle: '' });
@@ -259,7 +264,7 @@ export default function Home() {
         onOpenAddTool={handleOpenAddToolModal}
         onOpenConfirmToolDelete={handleOpenConfirmToolDelete}
         onOpenAddSubOption={handleOpenAddSubOption}
-        onOpenManageTelas={(category, tool, subOption) => handleOpenManageTelas(tool.id, category, subOption)}
+        onOpenManageTelas={handleOpenManageTelas}
         onOpenEditTool={handleOpenEditTool}
         onOpenEditSubOption={handleOpenEditSubOption}
         onOpenConfirmSubOptionDelete={handleOpenConfirmSubOptionDelete}

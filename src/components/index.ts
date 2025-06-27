@@ -15,4 +15,4 @@ export * from './VariableCard';
 export * from './VariableColumn';
 export * from './IconButton';
 export * from './TelaCard';
-export * from './ImportConfigModal'; // Added export
+export * from './ImportConfigModal';

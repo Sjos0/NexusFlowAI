@@ -1,4 +1,3 @@
-
 // src/components/KnowledgeBasePanel.tsx
 'use client';
 
@@ -11,9 +10,8 @@ import type { ToolCategory, Tool, SubOption, Variable } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ToolCard } from '@/components';
 import { IconButton } from './IconButton';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'react-hot-toast';
 import { importKnowledgeBaseFromText } from '@/lib/kbManager';
-// Removed ShadCN Button import as we are using raw buttons for import/export
 
 const categoryColors: Record<ToolCategory, string> = {
   triggers: 'hsl(var(--destructive))',
@@ -28,7 +26,7 @@ interface KnowledgeBasePanelProps {
   onOpenAddTool: (category: ToolCategory) => void;
   onOpenConfirmToolDelete: (category: ToolCategory, tool: Tool) => void;
   onOpenAddSubOption: (category: ToolCategory, tool: Tool) => void;
-  onOpenManageTelas: (category: ToolCategory, tool: Tool, subOption: SubOption) => void;
+  onOpenManageTelas: (toolId: string, category: ToolCategory, subOption: SubOption) => void;
   onOpenEditTool: (category: ToolCategory, tool: Tool) => void;
   onOpenEditSubOption: (category: ToolCategory, tool: Tool, subOption: SubOption) => void;
   onOpenConfirmSubOptionDelete: (category: ToolCategory, toolId: string, subOptionId: string, subOptionName: string) => void;
@@ -59,43 +57,7 @@ export function KnowledgeBasePanel({
   const actions = useToolsStore(state => state.actions);
   const constraints = useToolsStore(state => state.constraints);
   const variables = useToolsStore(state => state.variables);
-  const overwriteState = useToolsStore(state => state.overwriteState);
 
-  const { toast } = useToast();
-
-  const handleImportClick = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.txt';
-    input.onchange = async (event) => {
-      const file = (event.target as HTMLInputElement).files?.[0];
-      if (!file) {
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        try {
-          const text = e.target?.result as string;
-          const importedData = importKnowledgeBaseFromText(text);
-          overwriteState(importedData);
-          toast({
-            title: "Importação Concluída",
-            description: "O banco de conhecimento foi atualizado com sucesso.",
-          });
-        } catch (error: any) {
-          toast({
-            title: "Erro na Importação",
-            description: `Não foi possível importar o arquivo: ${error.message || "Formato inválido."}`,
-            variant: "destructive",
-          });
-        }
-      };
-      reader.readAsText(file);
-    };
-    input.click();
-  };
-  
   const triggersData = {
     title: 'Gatilhos',
     category: 'triggers',
@@ -180,7 +142,7 @@ export function KnowledgeBasePanel({
 
 
             <ScrollArea className="flex-grow">
-              <div className="p-6 pt-0"> {/* Adjusted padding to pt-0 */}
+              <div className="p-6 pt-0">
                 <div className="flex flex-col lg:flex-row lg:space-x-6 space-y-6 lg:space-y-0">
                   
                   {triggersData && (
@@ -219,7 +181,7 @@ export function KnowledgeBasePanel({
                                 accentColor={triggersData.color}
                                 onEditSubOption={(subOption) => onOpenEditSubOption(triggersData.category as ToolCategory, tool, subOption)}
                                 onDeleteSubOption={(subOptionId) => onOpenConfirmSubOptionDelete(triggersData.category as ToolCategory, tool.id, subOptionId, tool.subOptions.find(so => so.id === subOptionId)?.name || 'esta sub-opção')}
-                                onManageSubOption={(subOption) => onOpenManageTelas(triggersData.category as ToolCategory, tool, subOption)}
+                                onManageSubOption={(subOption) => onOpenManageTelas(tool.id, triggersData.category as ToolCategory, subOption)}
                               />
                             </motion.div>
                           ))}
@@ -264,7 +226,7 @@ export function KnowledgeBasePanel({
                                 accentColor={actionsData.color}
                                 onEditSubOption={(subOption) => onOpenEditSubOption(actionsData.category as ToolCategory, tool, subOption)}
                                 onDeleteSubOption={(subOptionId) => onOpenConfirmSubOptionDelete(actionsData.category as ToolCategory, tool.id, subOptionId, tool.subOptions.find(so => so.id === subOptionId)?.name || 'esta sub-opção')}
-                                onManageSubOption={(subOption) => onOpenManageTelas(actionsData.category as ToolCategory, tool, subOption)}
+                                onManageSubOption={(subOption) => onOpenManageTelas(tool.id, actionsData.category as ToolCategory, subOption)}
                               />
                             </motion.div>
                           ))}
@@ -309,7 +271,7 @@ export function KnowledgeBasePanel({
                                 accentColor={constraintsData.color}
                                 onEditSubOption={(subOption) => onOpenEditSubOption(constraintsData.category as ToolCategory, tool, subOption)}
                                 onDeleteSubOption={(subOptionId) => onOpenConfirmSubOptionDelete(constraintsData.category as ToolCategory, tool.id, subOptionId, tool.subOptions.find(so => so.id === subOptionId)?.name || 'esta sub-opção')}
-                                onManageSubOption={(subOption) => onOpenManageTelas(constraintsData.category as ToolCategory, tool, subOption)}
+                                onManageSubOption={(subOption) => onOpenManageTelas(tool.id, constraintsData.category as ToolCategory, subOption)}
                               />
                             </motion.div>
                           ))}
