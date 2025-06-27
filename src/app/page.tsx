@@ -1,7 +1,7 @@
 // src/app/page.tsx
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 // Component Imports
@@ -14,16 +14,17 @@ import {
   ManageTelasModal,
   EditToolModal,
   EditSubOptionModal,
-  AddEditVariableModal
+  AddEditVariableModal,
+  ImportConfigModal
 } from '@/components';
 // Util & Hook Imports
 import { useToolsStore } from '@/stores/useToolsStore';
 import type { ToolCategory, Tool, SubOption, Tela, Variable } from '@/lib/types';
 import { Book } from 'lucide-react';
-import { exportKnowledgeBase, importKnowledgeBaseFromText } from '@/lib/kbManager';
+import { generateKnowledgeBaseText } from '@/lib/kbManager';
+import { StoredState } from '@/stores/useToolsStore';
 
 export default function Home() {
-  // IMPORTANT: We now subscribe to the entire store to ensure re-renders on overwrite.
   const store = useToolsStore();
   const { 
     overwriteState, 
@@ -40,8 +41,6 @@ export default function Home() {
     hydrate 
   } = store;
   
-  const importFileRef = useRef<HTMLInputElement>(null);
-
   useEffect(() => { 
     hydrate(); 
   }, [hydrate]);
@@ -80,7 +79,8 @@ export default function Home() {
   
   const [addEditVariableModalState, setAddEditVariableModalState] = useState<{ isOpen: boolean; variable?: Variable }>({ isOpen: false });
   const [confirmVariableDeleteModalState, setConfirmVariableDeleteModalState] = useState<{ isOpen: boolean; variableId: string | null; variableName?: string }>({ isOpen: false, variableId: null });
-
+  
+  const [isPasteModalOpen, setIsPasteModalOpen] = useState(false);
   const [isKbOpen, setIsKbOpen] = useState(false);
 
   const categoryTitles: Record<ToolCategory, string> = {
@@ -204,69 +204,28 @@ export default function Home() {
     setConfirmVariableDeleteModalState({ isOpen: false, variableId: null, variableName: undefined });
   };
 
-  // Import/Export Handlers
-  const handleExport = () => {
-    const dataToExport = {
-      triggers: triggers,
-      actions: actions,
-      constraints: constraints,
-      variables: variables,
+  // --- New Copy/Paste Handlers ---
+  const handleCopy = () => {
+    const dataToCopy: StoredState = {
+      triggers,
+      actions,
+      constraints,
+      variables,
     };
-    exportKnowledgeBase(dataToExport);
-    toast.success('Arquivo de conhecimento exportado!');
+    const textToCopy = generateKnowledgeBaseText(dataToCopy);
+    navigator.clipboard.writeText(textToCopy)
+      .then(() => {
+        toast.success('Configuração copiada para a área de transferência!');
+      })
+      .catch(err => {
+        toast.error('Falha ao copiar. Verifique as permissões do navegador.');
+        console.error('Falha ao copiar texto: ', err);
+      });
   };
 
-  const handleImportClick = () => {
-    importFileRef.current?.click();
+  const handlePaste = () => {
+    setIsPasteModalOpen(true);
   };
-
-  const handleFileImport = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (!file.name.endsWith('.txt')) {
-      toast.error('Erro: Apenas arquivos .txt podem ser importados.');
-      if (event.target) event.target.value = ''; // Reset input
-      return;
-    }
-
-    if (!window.confirm('Atenção: Importar um novo arquivo irá substituir todo o seu Banco de Conhecimento atual. Deseja continuar?')) {
-      toast.dismiss(); 
-      if (event.target) event.target.value = ''; // Reset input
-      return;
-    }
-
-    const toastId = toast.loading('Processando arquivo...');
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const text = e.target?.result as string;
-        if (!text) throw new Error("O arquivo está vazio.");
-        
-        toast.loading('Analisando e substituindo dados...', { id: toastId });
-        const importedData = importKnowledgeBaseFromText(text);
-        
-        overwriteState(importedData);
-        
-        const feedback = `Importação concluída: ${importedData.triggers.length} gatilhos, ${importedData.actions.length} ações, ${importedData.constraints.length} restrições e ${importedData.variables.length} variáveis foram carregadas.`;
-        toast.success(feedback, { id: toastId, duration: 6000 });
-
-      } catch (err) {
-        console.error("Erro ao importar arquivo:", err);
-        const errorMessage = err instanceof Error ? err.message : 'O arquivo está corrompido ou não é um arquivo .txt válido.';
-        toast.error(`Erro: ${errorMessage}`, { id: toastId });
-      } finally {
-        if (event.target) event.target.value = ''; // Reset input in all cases after processing
-      }
-    };
-    reader.onerror = () => {
-        toast.error('Erro ao ler o arquivo.', { id: toastId });
-        if (event.target) event.target.value = ''; // Reset input
-    };
-    reader.readAsText(file);
-  };
-
 
   return (
     <>
@@ -307,17 +266,8 @@ export default function Home() {
         onOpenAddVariable={handleOpenAddVariable}
         onOpenEditVariable={handleOpenEditVariable}
         onOpenConfirmVariableDelete={handleOpenConfirmVariableDelete}
-        onExport={handleExport}
-        onImport={handleImportClick}
-      />
-
-      {/* Hidden file input for import */}
-      <input
-        type="file"
-        ref={importFileRef}
-        className="hidden"
-        accept=".txt"
-        onChange={handleFileImport}
+        onCopy={handleCopy}
+        onPaste={handlePaste}
       />
 
       <AnimatePresence>
@@ -386,6 +336,11 @@ export default function Home() {
             onConfirm={handleConfirmVariableDelete}
             message={`Tem certeza que deseja deletar a variável "${confirmVariableDeleteModalState.variableName || 'esta variável'}"? Esta ação não pode ser desfeita.`}
             title="Confirmar Exclusão de Variável"
+          />
+        )}
+        {isPasteModalOpen && (
+          <ImportConfigModal
+            onClose={() => setIsPasteModalOpen(false)}
           />
         )}
       </AnimatePresence>

@@ -5,7 +5,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { ToolColumn } from './ToolColumn';
 import { VariableColumn } from './VariableColumn';
-import { X, Zap, Target, ShieldCheck, Database, Upload, Download } from 'lucide-react';
+import { X, Zap, Target, ShieldCheck, Database, Copy, ClipboardPaste } from 'lucide-react';
 import { useToolsStore } from '@/stores/useToolsStore';
 import type { ToolCategory, Tool, SubOption, Variable } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -35,8 +35,8 @@ interface KnowledgeBasePanelProps {
   onOpenAddVariable: () => void;
   onOpenEditVariable: (variable: Variable) => void;
   onOpenConfirmVariableDelete: (variableId: string, variableName?: string) => void;
-  onExport: () => void;
-  onImport: () => void;
+  onCopy: () => void;
+  onPaste: () => void;
 }
 
 export function KnowledgeBasePanel({
@@ -52,8 +52,8 @@ export function KnowledgeBasePanel({
   onOpenAddVariable,
   onOpenEditVariable,
   onOpenConfirmVariableDelete,
-  onExport,
-  onImport
+  onCopy,
+  onPaste
 }: KnowledgeBasePanelProps) {
   const triggers = useToolsStore(state => state.triggers);
   const actions = useToolsStore(state => state.actions);
@@ -162,18 +162,18 @@ export function KnowledgeBasePanel({
                 </p>
                 <div className="flex space-x-3 mb-6 -mt-2">
                   <button 
-                    onClick={onExport} 
+                    onClick={onCopy} 
                     className="flex-1 flex items-center justify-center space-x-2 bg-muted text-muted-foreground px-3 py-2 rounded-lg text-sm hover:text-primary hover:bg-accent/20 transition-all"
                   >
-                    <Download size={16} />
-                    <span>Exportar</span>
+                    <Copy size={16} />
+                    <span>Copiar</span>
                   </button>
                   <button 
-                    onClick={onImport} 
+                    onClick={onPaste} 
                     className="flex-1 flex items-center justify-center space-x-2 bg-muted text-muted-foreground px-3 py-2 rounded-lg text-sm hover:text-primary hover:bg-accent/20 transition-all"
                   >
-                    <Upload size={16} />
-                    <span>Importar</span>
+                    <ClipboardPaste size={16} />
+                    <span>Colar configurações</span>
                   </button>
                 </div>
             </div>

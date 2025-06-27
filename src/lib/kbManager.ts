@@ -1,15 +1,13 @@
 // src/lib/kbManager.ts
-import type { ToolsState } from '@/stores/useToolsStore';
+import type { StoredState } from '@/stores/useToolsStore';
 import type { Tool, Variable, SubOption, Tela } from '@/lib/types';
 
-type KnowledgeBaseData = Omit<ToolsState, 'hydrate' | 'addTool' | 'removeTool' | 'updateTool' | 'addVariable' | 'removeVariable' | 'updateVariable' | 'overwriteState'>;
-
-// Function to generate the human-readable .txt file
-const generateHumanReadableText = (data: KnowledgeBaseData): string => {
+// Function to generate the human-readable .txt file string
+const generateHumanReadableText = (data: StoredState): string => {
   let output = '### BANCO DE CONHECimento NEXUSFLOW ###\n\n';
   
   const formatTool = (tool: Tool) => 
-    `  - ${tool.name}\n${tool.subOptions.map((so: SubOption) => 
+    `  - ${tool.name}\n${(tool.subOptions || []).map((so: SubOption) => 
       `    - ${so.name}\n${(so.telas || []).map((t: Tela) => 
         `      - Tela: ${t.content.replace(/\n/g, ' ')}\n`).join('')}`).join('')}`;
   
@@ -47,23 +45,15 @@ const generateHumanReadableText = (data: KnowledgeBaseData): string => {
   return output;
 };
 
-// Main Export Function - Now only exports a .txt file
-export const exportKnowledgeBase = (data: KnowledgeBaseData) => {
-  const textBlob = new Blob([generateHumanReadableText(data)], { type: 'text/plain;charset=utf-8' });
-  const textUrl = URL.createObjectURL(textBlob);
-  const textLink = document.createElement('a');
-  textLink.href = textUrl;
-  textLink.download = 'NexusFlow_Conhecimento.txt';
-  document.body.appendChild(textLink);
-  textLink.click();
-  document.body.removeChild(textLink);
-  URL.revokeObjectURL(textUrl);
+// Renamed from exportKnowledgeBase
+export const generateKnowledgeBaseText = (data: StoredState): string => {
+  return generateHumanReadableText(data);
 };
 
 // Function to import the knowledge base from a human-readable .txt file
-export const importKnowledgeBaseFromText = (text: string): KnowledgeBaseData => {
+export const importKnowledgeBaseFromText = (text: string): StoredState => {
   const lines = text.split('\n');
-  const data: KnowledgeBaseData = {
+  const data: StoredState = {
     triggers: [],
     actions: [],
     constraints: [],
@@ -128,7 +118,7 @@ export const importKnowledgeBaseFromText = (text: string): KnowledgeBaseData => 
 
   const totalItems = data.triggers.length + data.actions.length + data.constraints.length + data.variables.length;
    if (totalItems === 0 && !text.includes('(Nenhum')) {
-      throw new Error("Formato de arquivo inválido ou o arquivo não contém dados para importar.");
+      throw new Error("Formato de texto inválido ou o texto não contém dados para importar.");
    }
 
   return data;

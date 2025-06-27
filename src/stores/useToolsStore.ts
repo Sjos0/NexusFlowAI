@@ -5,7 +5,7 @@ import { variableTypes } from '@/lib/types';
 
 const STORAGE_KEY = 'nexusflow-tools-storage';
 
-type StoredState = Pick<ToolsState, 'triggers' | 'actions' | 'constraints' | 'variables'>;
+export type StoredState = Pick<ToolsState, 'triggers' | 'actions' | 'constraints' | 'variables'>;
 
 const defaultState: StoredState = {
   triggers: [],
