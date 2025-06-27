@@ -35,7 +35,7 @@ interface KnowledgeBasePanelProps {
   onOpenAddVariable: () => void;
   onOpenEditVariable: (variable: Variable) => void;
   onOpenConfirmVariableDelete: (variableId: string, variableName?: string) => void;
-  // onExport: () => void; // onExport is handled internally now
+  onExport: () => void;
   onImport: () => void;
 }
 
@@ -52,7 +52,7 @@ export function KnowledgeBasePanel({
   onOpenAddVariable,
   onOpenEditVariable,
   onOpenConfirmVariableDelete,
-  onExport: handleExport, // Rename prop to handleExport to avoid conflict
+  onExport,
   onImport
 }: KnowledgeBasePanelProps) {
   const triggers = useToolsStore(state => state.triggers);
@@ -95,6 +95,36 @@ export function KnowledgeBasePanel({
     };
     input.click();
   };
+  
+  const triggersData = {
+    title: 'Gatilhos',
+    category: 'triggers',
+    icon: Zap,
+    color: categoryColors.triggers,
+    data: triggers,
+  };
+  const actionsData = {
+    title: 'Ações',
+    category: 'actions',
+    icon: Target,
+    color: categoryColors.actions,
+    data: actions,
+  };
+  const constraintsData = {
+    title: 'Restrições',
+    category: 'constraints',
+    icon: ShieldCheck,
+    color: categoryColors.constraints,
+    data: constraints,
+  };
+    const variablesData = {
+    title: 'Variáveis',
+    category: 'variables',
+    icon: Database,
+    color: categoryColors.variables,
+    data: variables,
+  };
+
 
   return (
     <AnimatePresence>
@@ -159,7 +189,7 @@ export function KnowledgeBasePanel({
                         key={triggersData.category}
                         title={triggersData.title}
                         icon={triggersData.icon}
-                        onAdd={() => onOpenAddTool(triggersData.category)}
+                        onAdd={() => onOpenAddTool(triggersData.category as ToolCategory)}
                         accentColor={triggersData.color}
                       >
                         {(triggersData.data as Tool[]).length === 0 && (
@@ -183,13 +213,13 @@ export function KnowledgeBasePanel({
                               <ToolCard
                                 name={tool.name}
                                 subOptions={tool.subOptions}
-                                onDelete={() => onOpenConfirmToolDelete(triggersData.category, tool)}
-                                onEdit={() => onOpenEditTool(triggersData.category, tool)}
-                                onAddSubOption={() => onOpenAddSubOption(triggersData.category, tool)}
+                                onDelete={() => onOpenConfirmToolDelete(triggersData.category as ToolCategory, tool)}
+                                onEdit={() => onOpenEditTool(triggersData.category as ToolCategory, tool)}
+                                onAddSubOption={() => onOpenAddSubOption(triggersData.category as ToolCategory, tool)}
                                 accentColor={triggersData.color}
-                                onEditSubOption={(subOption) => onOpenEditSubOption(triggersData.category, tool, subOption)}
-                                onDeleteSubOption={(subOptionId) => onOpenConfirmSubOptionDelete(triggersData.category, tool.id, subOptionId, tool.subOptions.find(so => so.id === subOptionId)?.name || 'esta sub-opção')}
-                                onManageSubOption={(subOption) => onOpenManageTelas(triggersData.category, tool, subOption)}
+                                onEditSubOption={(subOption) => onOpenEditSubOption(triggersData.category as ToolCategory, tool, subOption)}
+                                onDeleteSubOption={(subOptionId) => onOpenConfirmSubOptionDelete(triggersData.category as ToolCategory, tool.id, subOptionId, tool.subOptions.find(so => so.id === subOptionId)?.name || 'esta sub-opção')}
+                                onManageSubOption={(subOption) => onOpenManageTelas(triggersData.category as ToolCategory, tool, subOption)}
                               />
                             </motion.div>
                           ))}
@@ -204,7 +234,7 @@ export function KnowledgeBasePanel({
                         key={actionsData.category}
                         title={actionsData.title}
                         icon={actionsData.icon}
-                        onAdd={() => onOpenAddTool(actionsData.category)}
+                        onAdd={() => onOpenAddTool(actionsData.category as ToolCategory)}
                         accentColor={actionsData.color}
                       >
                         {(actionsData.data as Tool[]).length === 0 && (
@@ -228,13 +258,13 @@ export function KnowledgeBasePanel({
                               <ToolCard
                                 name={tool.name}
                                 subOptions={tool.subOptions}
-                                onDelete={() => onOpenConfirmToolDelete(actionsData.category, tool)}
-                                onEdit={() => onOpenEditTool(actionsData.category, tool)}
-                                onAddSubOption={() => onOpenAddSubOption(actionsData.category, tool)}
+                                onDelete={() => onOpenConfirmToolDelete(actionsData.category as ToolCategory, tool)}
+                                onEdit={() => onOpenEditTool(actionsData.category as ToolCategory, tool)}
+                                onAddSubOption={() => onOpenAddSubOption(actionsData.category as ToolCategory, tool)}
                                 accentColor={actionsData.color}
-                                onEditSubOption={(subOption) => onOpenEditSubOption(actionsData.category, tool, subOption)}
-                                onDeleteSubOption={(subOptionId) => onOpenConfirmSubOptionDelete(actionsData.category, tool.id, subOptionId, tool.subOptions.find(so => so.id === subOptionId)?.name || 'esta sub-opção')}
-                                onManageSubOption={(subOption) => onOpenManageTelas(actionsData.category, tool, subOption)}
+                                onEditSubOption={(subOption) => onOpenEditSubOption(actionsData.category as ToolCategory, tool, subOption)}
+                                onDeleteSubOption={(subOptionId) => onOpenConfirmSubOptionDelete(actionsData.category as ToolCategory, tool.id, subOptionId, tool.subOptions.find(so => so.id === subOptionId)?.name || 'esta sub-opção')}
+                                onManageSubOption={(subOption) => onOpenManageTelas(actionsData.category as ToolCategory, tool, subOption)}
                               />
                             </motion.div>
                           ))}
@@ -249,7 +279,7 @@ export function KnowledgeBasePanel({
                         key={constraintsData.category}
                         title={constraintsData.title}
                         icon={constraintsData.icon}
-                        onAdd={() => onOpenAddTool(constraintsData.category)}
+                        onAdd={() => onOpenAddTool(constraintsData.category as ToolCategory)}
                         accentColor={constraintsData.color}
                       >
                         {(constraintsData.data as Tool[]).length === 0 && (
@@ -273,13 +303,13 @@ export function KnowledgeBasePanel({
                               <ToolCard
                                 name={tool.name}
                                 subOptions={tool.subOptions}
-                                onDelete={() => onOpenConfirmToolDelete(constraintsData.category, tool)}
-                                onEdit={() => onOpenEditTool(constraintsData.category, tool)}
-                                onAddSubOption={() => onOpenAddSubOption(constraintsData.category, tool)}
+                                onDelete={() => onOpenConfirmToolDelete(constraintsData.category as ToolCategory, tool)}
+                                onEdit={() => onOpenEditTool(constraintsData.category as ToolCategory, tool)}
+                                onAddSubOption={() => onOpenAddSubOption(constraintsData.category as ToolCategory, tool)}
                                 accentColor={constraintsData.color}
-                                onEditSubOption={(subOption) => onOpenEditSubOption(constraintsData.category, tool, subOption)}
-                                onDeleteSubOption={(subOptionId) => onOpenConfirmSubOptionDelete(constraintsData.category, tool.id, subOptionId, tool.subOptions.find(so => so.id === subOptionId)?.name || 'esta sub-opção')}
-                                onManageSubOption={(subOption) => onOpenManageTelas(constraintsData.category, tool, subOption)}
+                                onEditSubOption={(subOption) => onOpenEditSubOption(constraintsData.category as ToolCategory, tool, subOption)}
+                                onDeleteSubOption={(subOptionId) => onOpenConfirmSubOptionDelete(constraintsData.category as ToolCategory, tool.id, subOptionId, tool.subOptions.find(so => so.id === subOptionId)?.name || 'esta sub-opção')}
+                                onManageSubOption={(subOption) => onOpenManageTelas(constraintsData.category as ToolCategory, tool, subOption)}
                               />
                             </motion.div>
                           ))}
