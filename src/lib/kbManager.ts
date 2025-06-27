@@ -77,3 +77,82 @@ export const exportKnowledgeBase = (data: KnowledgeBaseData) => {
   document.body.removeChild(nexusLink);
   URL.revokeObjectURL(nexusUrl);
 };
+
+// Function to import the knowledge base from a human-readable .txt file
+export const importKnowledgeBaseFromText = (text: string): KnowledgeBaseData => {
+  const lines = text.split('\n');
+  const data: KnowledgeBaseData = {
+    triggers: [],
+    actions: [],
+    constraints: [],
+    variables: [],
+  };
+
+  let currentSection: 'GATILHOS' | 'AÇÕES' | 'RESTRIÇÕES' | 'VARIÁVEIS' | null = null;
+  let currentTool: Tool | null = null;
+  let currentSubOption: SubOption | null = null;
+  let lastLineWasTela = false; // To handle multiline Tela content
+
+  for (const line of lines) {
+    const trimmedLine = line.trimEnd();
+    
+    // Skip empty lines
+    if (trimmedLine === '') {
+      continue;
+    }
+
+    if (trimmedLine.startsWith('### BANCO DE CONHECIMENTO NEXUSFLOW ###')) {
+      // Ignore header
+      continue;
+    }
+
+    if (trimmedLine === '## GATILHOS') {
+      currentSection = 'GATILHOS';
+      currentTool = null;
+      currentSubOption = null;
+      continue;
+    }
+    if (trimmedLine === '## AÇÕES') {
+      currentSection = 'AÇÕES';
+      currentTool = null;
+      currentSubOption = null;
+      continue;
+    }
+    if (trimmedLine === '## RESTRIÇÕES') {
+      currentSection = 'RESTRIÇÕES';
+      currentTool = null;
+      currentSubOption = null;
+      continue;
+    }
+    if (trimmedLine === '## VARIÁVEIS') {
+      currentSection = 'VARIÁVEIS';
+      currentTool = null;
+      currentSubOption = null;
+      continue;
+    }
+
+    if (currentSection === 'VARIÁVEIS' && trimmedLine.startsWith('  - ')) {
+      const varMatch = trimmedLine.match(/^  - (.*) \(Tipo: (.*)(, Segura)?\)$/);
+      if (varMatch) {
+        data.variables.push({
+          id: `var-${Date.now()}-${Math.random()}`, // Generate a simple ID
+          name: varMatch[1].trim(),
+          type: varMatch[2].trim() as Variable['type'], // Assuming the type string matches the enum
+          isSecure: !!varMatch[3],
+        });
+      }
+    } else if (currentSection && ['GATILHOS', 'AÇÕES', 'RESTRIÇÕES'].includes(currentSection)) {
+      if (trimmedLine.startsWith('  - ')) {
+        currentTool = { id: `tool-${Date.now()}-${Math.random()}`, name: trimmedLine.substring(4).trim(), subOptions: [] };
+        data[currentSection.toLowerCase() as 'triggers' | 'actions' | 'constraints'].push(currentTool);
+        currentSubOption = null;
+      } else if (currentTool && trimmedLine.startsWith('    - ')) {
+        currentSubOption = { id: `sub-${Date.now()}-${Math.random()}`, name: trimmedLine.substring(6).trim(), telas: [] };
+        currentTool.subOptions.push(currentSubOption);
+      } else if (currentSubOption && trimmedLine.startsWith('      - Tela: ')) {
+        currentSubOption.telas.push({ id: `tela-${Date.now()}-${Math.random()}`, content: trimmedLine.substring(14).trim() });
+      }
+    }
+  }
+  return data;
+};

@@ -295,7 +295,7 @@ export default function Home() {
           </button>
         </header>
         
-        <div className="flex-grow flex justify-center items-center overflow-y-auto p-4 lg:p-6">
+        <div className="flex-grow overflow-hidden p-4 lg:p-6 flex justify-center">
           <AIPromptArea />
         </div>
 

@@ -11,10 +11,12 @@ import type { ToolCategory, Tool, SubOption, Variable } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ToolCard } from '@/components';
 import { IconButton } from './IconButton';
+import { useToast } from '@/hooks/use-toast';
+import { importKnowledgeBaseFromText } from '@/lib/kbManager';
 // Removed ShadCN Button import as we are using raw buttons for import/export
 
 const categoryColors: Record<ToolCategory, string> = {
-  triggers: 'hsl(var(--destructive))', 
+  triggers: 'hsl(var(--destructive))',
   actions: 'hsl(var(--primary))',    
   constraints: 'hsl(145 70% 40%)', 
   variables: 'hsl(45 90% 50%)' 
@@ -33,7 +35,7 @@ interface KnowledgeBasePanelProps {
   onOpenAddVariable: () => void;
   onOpenEditVariable: (variable: Variable) => void;
   onOpenConfirmVariableDelete: (variableId: string, variableName?: string) => void;
-  onExport: () => void;
+  // onExport: () => void; // onExport is handled internally now
   onImport: () => void;
 }
 
@@ -50,26 +52,49 @@ export function KnowledgeBasePanel({
   onOpenAddVariable,
   onOpenEditVariable,
   onOpenConfirmVariableDelete,
-  onExport,
+  onExport: handleExport, // Rename prop to handleExport to avoid conflict
   onImport
 }: KnowledgeBasePanelProps) {
   const triggers = useToolsStore(state => state.triggers);
   const actions = useToolsStore(state => state.actions);
   const constraints = useToolsStore(state => state.constraints);
   const variables = useToolsStore(state => state.variables);
+  const overwriteState = useToolsStore(state => state.overwriteState);
 
-  const allColumnsData = [
-    { title: "Gatilhos", icon: Zap, category: "triggers" as ToolCategory, data: triggers, color: categoryColors.triggers },
-    { title: "Ações", icon: Target, category: "actions" as ToolCategory, data: actions, color: categoryColors.actions },
-    { title: "Restrições", icon: ShieldCheck, category: "constraints" as ToolCategory, data: constraints, color: categoryColors.constraints },
-    { title: "Variáveis", icon: Database, category: "variables" as ToolCategory, data: variables, color: categoryColors.variables },
-  ];
+  const { toast } = useToast();
 
-  const triggersData = allColumnsData.find(col => col.category === 'triggers');
-  const actionsData = allColumnsData.find(col => col.category === 'actions');
-  const constraintsData = allColumnsData.find(col => col.category === 'constraints');
-  const variablesData = allColumnsData.find(col => col.category === 'variables');
+  const handleImportClick = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.txt';
+    input.onchange = async (event) => {
+      const file = (event.target as HTMLInputElement).files?.[0];
+      if (!file) {
+        return;
+      }
 
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const text = e.target?.result as string;
+          const importedData = importKnowledgeBaseFromText(text);
+          overwriteState(importedData);
+          toast({
+            title: "Importação Concluída",
+            description: "O banco de conhecimento foi atualizado com sucesso.",
+          });
+        } catch (error: any) {
+          toast({
+            title: "Erro na Importação",
+            description: `Não foi possível importar o arquivo: ${error.message || "Formato inválido."}`,
+            variant: "destructive",
+          });
+        }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  };
 
   return (
     <AnimatePresence>
