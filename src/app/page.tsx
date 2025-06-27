@@ -20,7 +20,7 @@ import {
 import { useToolsStore } from '@/stores/useToolsStore';
 import type { ToolCategory, Tool, SubOption, Tela, Variable } from '@/lib/types';
 import { Book } from 'lucide-react';
-import { exportKnowledgeBase } from '@/lib/kbManager';
+import { exportKnowledgeBase, importKnowledgeBaseFromText } from '@/lib/kbManager';
 
 export default function Home() {
   // IMPORTANT: We now subscribe to the entire state to ensure re-renders
@@ -213,7 +213,7 @@ export default function Home() {
       variables: variables,
     };
     exportKnowledgeBase(dataToExport);
-    toast.success('Arquivos de conhecimento exportados!');
+    toast.success('Arquivo de conhecimento exportado!');
   };
 
   const handleImportClick = () => {
@@ -224,8 +224,8 @@ export default function Home() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (!file.name.endsWith('.nexus')) {
-      toast.error('Erro: Apenas arquivos .nexus podem ser importados.');
+    if (!file.name.endsWith('.txt')) {
+      toast.error('Erro: Apenas arquivos .txt podem ser importados.');
       if (event.target) event.target.value = ''; // Reset input
       return;
     }
@@ -241,27 +241,17 @@ export default function Home() {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const encodedData = e.target?.result as string;
-        const jsonString = decodeURIComponent(escape(atob(encodedData)));
-        const importedData = JSON.parse(jsonString);
+        const text = e.target?.result as string;
+        if (!text) throw new Error("O arquivo está vazio.");
         
-        if (
-          typeof importedData === 'object' &&
-          importedData !== null &&
-          Array.isArray(importedData.triggers) &&
-          Array.isArray(importedData.actions) &&
-          Array.isArray(importedData.constraints) &&
-          Array.isArray(importedData.variables)
-        ) {
-          overwriteState(importedData);
-          toast.success('Banco de Conhecimento importado com sucesso!', { id: toastId });
-        } else {
-          throw new Error('O arquivo .nexus não contém a estrutura de dados esperada.');
-        }
+        const importedData = importKnowledgeBaseFromText(text);
+        
+        overwriteState(importedData);
+        toast.success('Banco de Conhecimento importado com sucesso!', { id: toastId });
 
       } catch (err) {
         console.error("Erro ao importar arquivo:", err);
-        const errorMessage = err instanceof Error ? err.message : 'O arquivo está corrompido ou não é um arquivo .nexus válido.';
+        const errorMessage = err instanceof Error ? err.message : 'O arquivo está corrompido ou não é um arquivo .txt válido.';
         toast.error(`Erro: ${errorMessage}`, { id: toastId });
       } finally {
         if (event.target) event.target.value = ''; // Reset input in all cases after processing
@@ -323,7 +313,7 @@ export default function Home() {
         type="file"
         ref={importFileRef}
         className="hidden"
-        accept=".nexus"
+        accept=".txt"
         onChange={handleFileImport}
       />
 

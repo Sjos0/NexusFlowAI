@@ -6,7 +6,7 @@ type KnowledgeBaseData = Omit<ToolsState, 'hydrate' | 'addTool' | 'removeTool' |
 
 // Function to generate the human-readable .txt file
 const generateHumanReadableText = (data: KnowledgeBaseData): string => {
-  let output = '### BANCO DE CONHECIMENTO NEXUSFLOW ###\n\n';
+  let output = '### BANCO DE CONHECimento NEXUSFLOW ###\n\n';
   
   const formatTool = (tool: Tool) => 
     `  - ${tool.name}\n${tool.subOptions.map((so: SubOption) => 
@@ -47,9 +47,8 @@ const generateHumanReadableText = (data: KnowledgeBaseData): string => {
   return output;
 };
 
-// Main Export Function
+// Main Export Function - Now only exports a .txt file
 export const exportKnowledgeBase = (data: KnowledgeBaseData) => {
-  // Create .txt file
   const textBlob = new Blob([generateHumanReadableText(data)], { type: 'text/plain;charset=utf-8' });
   const textUrl = URL.createObjectURL(textBlob);
   const textLink = document.createElement('a');
@@ -59,23 +58,6 @@ export const exportKnowledgeBase = (data: KnowledgeBaseData) => {
   textLink.click();
   document.body.removeChild(textLink);
   URL.revokeObjectURL(textUrl);
-
-  // Create .nexus file
-  const jsonString = JSON.stringify(data);
-  // Encode UTF-8 string to Base64:
-  // 1. encodeURIComponent to handle multi-byte UTF-8 characters
-  // 2. unescape to convert %XX sequences to single bytes (binary string)
-  // 3. btoa to Base64 encode the binary string
-  const encodedData = btoa(unescape(encodeURIComponent(jsonString)));
-  const nexusBlob = new Blob([encodedData], { type: 'application/octet-stream' });
-  const nexusUrl = URL.createObjectURL(nexusBlob);
-  const nexusLink = document.createElement('a');
-  nexusLink.href = nexusUrl;
-  nexusLink.download = 'NexusFlow_Backup.nexus';
-  document.body.appendChild(nexusLink);
-  nexusLink.click();
-  document.body.removeChild(nexusLink);
-  URL.revokeObjectURL(nexusUrl);
 };
 
 // Function to import the knowledge base from a human-readable .txt file
@@ -88,71 +70,66 @@ export const importKnowledgeBaseFromText = (text: string): KnowledgeBaseData => 
     variables: [],
   };
 
-  let currentSection: 'GATILHOS' | 'AÇÕES' | 'RESTRIÇÕES' | 'VARIÁVEIS' | null = null;
+  let currentSection: 'triggers' | 'actions' | 'constraints' | 'variables' | null = null;
   let currentTool: Tool | null = null;
   let currentSubOption: SubOption | null = null;
-  let lastLineWasTela = false; // To handle multiline Tela content
 
   for (const line of lines) {
-    const trimmedLine = line.trimEnd();
+    if (line.trim() === '' || line.startsWith('###')) continue;
+
+    if (line.startsWith('## GATILHOS')) { currentSection = 'triggers'; currentTool = null; continue; }
+    if (line.startsWith('## AÇÕES')) { currentSection = 'actions'; currentTool = null; continue; }
+    if (line.startsWith('## RESTRIÇÕES')) { currentSection = 'constraints'; currentTool = null; continue; }
+    if (line.startsWith('## VARIÁVEIS')) { currentSection = 'variables'; currentTool = null; continue; }
     
-    // Skip empty lines
-    if (trimmedLine === '') {
-      continue;
-    }
+    if (!currentSection || line.trim().startsWith('(Nenhum')) continue;
+    
+    const indentation = line.search(/\S|$/);
+    const content = line.trim();
 
-    if (trimmedLine.startsWith('### BANCO DE CONHECIMENTO NEXUSFLOW ###')) {
-      // Ignore header
-      continue;
-    }
-
-    if (trimmedLine === '## GATILHOS') {
-      currentSection = 'GATILHOS';
-      currentTool = null;
-      currentSubOption = null;
-      continue;
-    }
-    if (trimmedLine === '## AÇÕES') {
-      currentSection = 'AÇÕES';
-      currentTool = null;
-      currentSubOption = null;
-      continue;
-    }
-    if (trimmedLine === '## RESTRIÇÕES') {
-      currentSection = 'RESTRIÇÕES';
-      currentTool = null;
-      currentSubOption = null;
-      continue;
-    }
-    if (trimmedLine === '## VARIÁVEIS') {
-      currentSection = 'VARIÁVEIS';
-      currentTool = null;
-      currentSubOption = null;
-      continue;
-    }
-
-    if (currentSection === 'VARIÁVEIS' && trimmedLine.startsWith('  - ')) {
-      const varMatch = trimmedLine.match(/^  - (.*) \(Tipo: (.*)(, Segura)?\)$/);
-      if (varMatch) {
-        data.variables.push({
-          id: `var-${Date.now()}-${Math.random()}`, // Generate a simple ID
-          name: varMatch[1].trim(),
-          type: varMatch[2].trim() as Variable['type'], // Assuming the type string matches the enum
-          isSecure: !!varMatch[3],
-        });
+    if (currentSection === 'variables') {
+      if (indentation === 2 && content.startsWith('- ')) {
+        const varContent = content.substring(2);
+        const match = varContent.match(/^(.*) \(Tipo: (Booleano|Inteiro|String|Decimal|Dicionário|Lista)(, Segura)?\)$/);
+        if (match) {
+          data.variables.push({
+            id: crypto.randomUUID(),
+            name: match[1].trim(),
+            type: match[2] as Variable['type'],
+            isSecure: !!match[3],
+            description: '',
+          });
+        }
       }
-    } else if (currentSection && ['GATILHOS', 'AÇÕES', 'RESTRIÇÕES'].includes(currentSection)) {
-      if (trimmedLine.startsWith('  - ')) {
-        currentTool = { id: `tool-${Date.now()}-${Math.random()}`, name: trimmedLine.substring(4).trim(), subOptions: [] };
-        data[currentSection.toLowerCase() as 'triggers' | 'actions' | 'constraints'].push(currentTool);
+    } else { // Triggers, Actions, Constraints
+      if (indentation === 2 && content.startsWith('- ')) { // Tool
+        currentTool = {
+          id: crypto.randomUUID(),
+          name: content.substring(2),
+          subOptions: []
+        };
+        data[currentSection].push(currentTool);
         currentSubOption = null;
-      } else if (currentTool && trimmedLine.startsWith('    - ')) {
-        currentSubOption = { id: `sub-${Date.now()}-${Math.random()}`, name: trimmedLine.substring(6).trim(), telas: [] };
+      } else if (currentTool && indentation === 4 && content.startsWith('- ')) { // SubOption
+        currentSubOption = {
+          id: crypto.randomUUID(),
+          name: content.substring(2),
+          telas: []
+        };
         currentTool.subOptions.push(currentSubOption);
-      } else if (currentSubOption && trimmedLine.startsWith('      - Tela: ')) {
-        currentSubOption.telas.push({ id: `tela-${Date.now()}-${Math.random()}`, content: trimmedLine.substring(14).trim() });
+      } else if (currentSubOption && indentation === 6 && content.startsWith('- Tela: ')) { // Tela
+        currentSubOption.telas.push({
+          id: crypto.randomUUID(),
+          content: content.substring(8)
+        });
       }
     }
   }
+
+  const totalItems = data.triggers.length + data.actions.length + data.constraints.length + data.variables.length;
+   if (totalItems === 0) {
+      throw new Error("Formato de arquivo inválido ou arquivo vazio.");
+   }
+
   return data;
 };
