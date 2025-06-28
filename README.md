@@ -3,9 +3,9 @@
 
 ### Seu Co-Piloto de Automação Inteligente para MacroDroid
 
-[![Deploy no Vercel](https://img.shields.io/badge/Deploy-Vercel-black?style=for-the-badge&logo=vercel)](https://nexus-flow-orrwtkrkb-sjos0s-projects.vercel.app/)
+[![Deploy no Vercel](https://img.shields.io/badge/Deploy-Vercel-black?style=for-the-badge&logo=vercel)](https://nexus-flow-ai.vercel.app/)
 
-**Acesse a aplicação em produção:** **[https://nexus-flow-orrwtkrkb-sjos0s-projects.vercel.app/](https://nexus-flow-orrwtkrkb-sjos0s-projects.vercel.app/)**
+**Acesse a aplicação em produção:** **[https://nexus-flow-ai.vercel.app/](https://nexus-flow-ai.vercel.app/)**
 
 ---
 
