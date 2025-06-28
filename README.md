@@ -11,7 +11,7 @@
 
 ## 🚀 O que é o NexusFlow?
 
-NexusFlow é uma aplicação web inovadora projetada para ser o assistente definitivo de usuários do **MacroDroid**. Ele utiliza o poder da Inteligência Artificial Generativa para transformar descrições em linguagem natural em planos de automação detalhados e prontos para serem implementados.
+NexusFlow é uma aplicação web inovadora projetada para ser o assistente definitivo de usuários do [MacroDroid](https://play.google.com/store/apps/details?id=com.arlosoft.macrodroid). Ele utiliza o poder da Inteligência Artificial Generativa para transformar descrições em linguagem natural em planos de automação detalhados e prontos para serem implementados.
 
 Em vez de se perder em menus complexos, o usuário simplesmente descreve o que deseja automatizar e fornece à IA (apelidada de **Nexus**) as ferramentas que possui disponíveis. Nexus então analisa o pedido e gera um guia passo a passo, utilizando exatamente os gatilhos, ações e restrições que o usuário cadastrou.
 
